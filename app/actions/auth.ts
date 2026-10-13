@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -153,12 +154,37 @@ export async function signUp(formData: FormData) {
 export async function requestPasswordReset(formData: FormData) {
   const email = z.string().email().safeParse(formData.get("email"));
   if (!email.success) redirect(withMessage("/recuperar-senha", "erro", "Informe um e-mail válido."));
-  const supabase = await createClient();
+
+  // Recovery links are commonly opened by the mail app in a different browser.
+  // The implicit flow carries the recovery session in the URL fragment, avoiding
+  // a PKCE verifier cookie that only exists in the browser that requested it.
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      auth: {
+        flowType: "implicit",
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    },
+  );
   const requestHeaders = await headers();
   const origin = getSiteUrl(requestHeaders);
-  await supabase.auth.resetPasswordForEmail(email.data, {
-    redirectTo: `${origin}/auth/callback?next=/nova-senha`,
+  const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
+    redirectTo: `${origin}/nova-senha`,
   });
+
+  if (error?.code === "over_email_send_rate_limit") {
+    const message = error.message.toLowerCase().includes("email rate limit exceeded")
+      ? "O serviço de e-mail atingiu o limite de envios. Tente novamente mais tarde."
+      : "Aguarde um minuto antes de solicitar outro link.";
+    redirect(withMessage("/recuperar-senha", "erro", message));
+  }
+  if (error) {
+    redirect(withMessage("/recuperar-senha", "erro", "Não foi possível enviar o link agora. Tente novamente."));
+  }
   redirect(withMessage("/login", "sucesso", "Se o e-mail estiver cadastrado, você receberá o link de recuperação."));
 }
 
