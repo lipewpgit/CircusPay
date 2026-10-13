@@ -122,7 +122,7 @@ export async function signUp(formData: FormData) {
   const supabase = await createClient();
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL!;
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -131,7 +131,16 @@ export async function signUp(formData: FormData) {
     },
   });
 
+  if (error?.code === "over_email_send_rate_limit") {
+    redirect(withMessage("/login", "sucesso", "Cadastro recebido. O e-mail de confirmação já foi enviado; aguarde um minuto antes de pedir outro."));
+  }
+  if (error?.code === "user_already_exists" || error?.code === "email_exists") {
+    redirect(withMessage("/login", "sucesso", "Este e-mail já possui um cadastro. Entre na conta ou use a recuperação de senha."));
+  }
   if (error) redirect(withMessage("/cadastro", "erro", "Não foi possível criar a conta. Confira os dados e tente novamente."));
+  if (data.user?.identities?.length === 0) {
+    redirect(withMessage("/login", "sucesso", "Este e-mail já possui um cadastro. Entre na conta ou use a recuperação de senha."));
+  }
   redirect(withMessage("/login", "sucesso", "Conta criada. Confira seu e-mail para confirmar o acesso."));
 }
 
