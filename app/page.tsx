@@ -8,7 +8,6 @@ import {
   Check,
   ChevronRight,
   CreditCard,
-  LockKeyhole,
   Menu,
   PackagePlus,
   QrCode,
@@ -140,10 +139,9 @@ export default function Home() {
         </div>
         <div className="award-grid">
           {awards.map((award, index) => (
-            <article key={award.value} className={index === 0 ? "award-active" : ""} style={{ "--award-index": index } as React.CSSProperties}>
+            <article key={award.value} className="award-active" style={{ "--award-index": index } as React.CSSProperties}>
               <div className="award-image-wrap">
                 <Image src={award.image} alt={`Plaquinha CircusPay de ${award.value} em saques`} width={600} height={800}/>
-                {index > 0 && <span className="award-lock"><LockKeyhole size={18}/> Meta bloqueada</span>}
               </div>
               <div className="award-meta"><span>{award.label}</span><strong>{award.value} em saques</strong></div>
             </article>
