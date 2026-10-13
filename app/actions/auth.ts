@@ -51,7 +51,10 @@ export async function resendConfirmation(formData: FormData) {
   });
 
   if (error?.code === "over_email_send_rate_limit") {
-    redirect("/login?erro=" + encodeURIComponent("Aguarde um minuto antes de solicitar outro e-mail.") + "&confirmar=1");
+    const message = error.message.toLowerCase().includes("email rate limit exceeded")
+      ? "O serviço de e-mail atingiu o limite de envios. Tente novamente mais tarde."
+      : "Aguarde um minuto antes de solicitar outro e-mail.";
+    redirect("/login?erro=" + encodeURIComponent(message) + "&confirmar=1");
   }
   if (error) {
     redirect("/login?erro=" + encodeURIComponent("Não foi possível reenviar agora. Confira o e-mail e tente novamente.") + "&confirmar=1");
@@ -132,7 +135,10 @@ export async function signUp(formData: FormData) {
   });
 
   if (error?.code === "over_email_send_rate_limit") {
-    redirect(withMessage("/login", "sucesso", "Cadastro recebido. O e-mail de confirmação já foi enviado; aguarde um minuto antes de pedir outro."));
+    const message = error.message.toLowerCase().includes("email rate limit exceeded")
+      ? "Sua conta foi registrada, mas o serviço de e-mail atingiu o limite de envios. Tente reenviar a confirmação mais tarde."
+      : "Cadastro recebido. O e-mail de confirmação já foi enviado; aguarde um minuto antes de pedir outro.";
+    redirect("/login?erro=" + encodeURIComponent(message) + "&confirmar=1");
   }
   if (error?.code === "user_already_exists" || error?.code === "email_exists") {
     redirect(withMessage("/login", "sucesso", "Este e-mail já possui um cadastro. Entre na conta ou use a recuperação de senha."));
