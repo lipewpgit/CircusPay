@@ -8,6 +8,7 @@ export default async function ActivateAdminPage({ searchParams }: { searchParams
 
   return (
     <AuthShell
+      variant="admin"
       title="Ativar administrador"
       description="Crie o acesso inicial usando o e-mail autorizado."
       footer={<>Já ativou? <Link href="/admin/login">Entrar no painel</Link></>}

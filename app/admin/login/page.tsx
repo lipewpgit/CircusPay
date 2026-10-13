@@ -8,6 +8,7 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
 
   return (
     <AuthShell
+      variant="admin"
       title="Painel administrativo"
       description="Acesso exclusivo à administração da CircusPay."
       footer={<>Primeiro acesso? <Link href="/admin/ativar">Ativar painel</Link></>}
