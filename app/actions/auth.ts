@@ -9,6 +9,16 @@ function withMessage(path: string, key: "erro" | "sucesso", message: string) {
   return `${path}?${key}=${encodeURIComponent(message)}`;
 }
 
+function getSiteUrl(requestHeaders: Headers) {
+  const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProductionUrl) return `https://${vercelProductionUrl}`;
+
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredUrl) return configuredUrl.replace(/\/$/, "");
+
+  return (requestHeaders.get("origin") ?? "https://circus-pay.vercel.app").replace(/\/$/, "");
+}
+
 export async function signIn(formData: FormData) {
   const parsed = z.object({
     email: z.string().email(),
@@ -130,7 +140,7 @@ export async function requestPasswordReset(formData: FormData) {
   if (!email.success) redirect(withMessage("/recuperar-senha", "erro", "Informe um e-mail válido."));
   const supabase = await createClient();
   const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL!;
+  const origin = getSiteUrl(requestHeaders);
   await supabase.auth.resetPasswordForEmail(email.data, {
     redirectTo: `${origin}/auth/callback?next=/nova-senha`,
   });
