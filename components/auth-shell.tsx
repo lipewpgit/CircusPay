@@ -21,6 +21,10 @@ export function AuthShell({
   return (
     <main className={`auth-page ${isAdmin ? "admin-auth-page" : "seller-auth-page"}`}>
       {!isAdmin && <section className="auth-visual">
+        <div className="auth-fx" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, index) => <i key={index} />)}
+          <span className="auth-beam" />
+        </div>
         <div className="auth-brand-row">
           <Brand />
           <span className="auth-live"><i /> Sistema online</span>
@@ -35,6 +39,7 @@ export function AuthShell({
           <div className="auth-stage" aria-hidden="true">
             <span className="stage-orbit orbit-one" />
             <span className="stage-orbit orbit-two" />
+            <span className="stage-scan" />
             <div className="stage-core"><span /><Image src="/circuspay-mark-transparent.png" width={112} height={112} alt="" /></div>
             <div className="stage-chip stage-chip-one"><Activity size={14}/><span>Vendas em tempo real</span></div>
             <div className="stage-chip stage-chip-two"><WalletCards size={14}/><span>Gestão financeira</span></div>
