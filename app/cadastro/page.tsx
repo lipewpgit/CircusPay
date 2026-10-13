@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Building2, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { signUp } from "@/app/actions/auth";
 import { AuthShell } from "@/components/auth-shell";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const query = await searchParams;
@@ -13,7 +14,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <label><span>Tipo da conta</span><div className="field"><Building2 size={18}/><select name="accountType" defaultValue="cpf"><option value="cpf">Pessoa física (CPF)</option><option value="cnpj">Pessoa jurídica (CNPJ)</option></select></div></label>
         <label><span>E-mail</span><div className="field"><Mail size={18}/><input name="email" type="email" autoComplete="email" placeholder="voce@email.com" required /></div></label>
         <label><span>Senha</span><div className="field"><LockKeyhole size={18}/><input name="password" type="password" autoComplete="new-password" placeholder="Mínimo de 8 caracteres" minLength={8} required /></div></label>
-        <button className="primary-button" type="submit">Criar minha conta</button>
+        <PendingSubmitButton idleLabel="Criar minha conta" pendingLabel="Criando sua conta..." />
         <small className="terms">Ao continuar, você confirma que os dados informados são verdadeiros.</small>
       </form>
     </AuthShell>
