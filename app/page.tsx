@@ -18,6 +18,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
+import { LandingEffects } from "@/components/landing-effects";
 
 const awards = [
   { image: "/award-10k.webp", value: "R$ 10 mil", label: "Primeira conquista" },
@@ -36,6 +37,8 @@ const features = [
 export default function Home() {
   return (
     <main className="landing-page">
+      <LandingEffects />
+      <div className="landing-pointer-glow" aria-hidden="true" />
       <header className="landing-header">
         <Link href="/" aria-label="Página inicial"><Brand compact /></Link>
         <nav className="landing-nav" aria-label="Navegação principal">
@@ -88,7 +91,7 @@ export default function Home() {
         <div>PIX <i/> CHECKOUT <i/> NOTIFICAÇÕES <i/> PRODUTOS <i/> SAQUES <i/> DASHBOARD <i/> PIX <i/> CHECKOUT <i/> NOTIFICAÇÕES <i/> PRODUTOS <i/> SAQUES <i/> DASHBOARD</div>
       </div>
 
-      <section className="landing-section feature-section" id="recursos">
+      <section className="landing-section feature-section" id="recursos" data-reveal>
         <div className="landing-section-head">
           <span>TUDO EM UM SÓ LUGAR</span>
           <h2>Uma operação bonita por fora.<br/><em>Completa por dentro.</em></h2>
@@ -106,7 +109,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="landing-dark-story" id="como-funciona">
+      <section className="landing-dark-story" id="como-funciona" data-reveal>
         <div className="story-copy">
           <span>DA CRIAÇÃO AO SAQUE</span>
           <h2>Cada etapa da venda,<br/><em>sem sair do palco.</em></h2>
@@ -127,7 +130,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="landing-section awards-section" id="premiacoes">
+      <section className="landing-section awards-section" id="premiacoes" data-reveal>
         <div className="awards-heading">
           <div>
             <span><Trophy size={15}/> CONQUISTAS CIRCUSPAY</span>
@@ -135,9 +138,23 @@ export default function Home() {
           </div>
           <p>As plaquinhas marcam os grandes momentos da sua operação. Cada meta considera o total de saques aprovados pela CircusPay.</p>
         </div>
+        <div className="award-100k-stage">
+          <div className="award-stage-number" aria-hidden="true">100K</div>
+          <div className="award-stage-copy">
+            <span><i /> DESTAQUE DA JORNADA</span>
+            <h3>A marca que muda<br/>o tamanho da operação.</h3>
+            <p>Ao atingir R$ 100 mil em saques aprovados, uma nova conquista é liberada no seu painel. Um marco feito para ser visto.</p>
+            <div className="award-stage-detail"><Trophy size={18}/><div><strong>Plaquinha de R$ 100 mil</strong><small>Desbloqueada pela meta real de saques</small></div></div>
+          </div>
+          <div className="award-stage-visual">
+            <div className="award-stage-halo" />
+            <Image src="/award-100k.webp" alt="Plaquinha CircusPay de R$ 100 mil" width={600} height={800} priority={false}/>
+            <span className="award-stage-badge"><LockKeyhole size={15}/> CONQUISTA PROTEGIDA</span>
+          </div>
+        </div>
         <div className="award-grid">
           {awards.map((award, index) => (
-            <article key={award.value} className={index === 0 ? "award-active" : ""}>
+            <article key={award.value} className={index === 0 ? "award-active" : ""} style={{ "--award-index": index } as React.CSSProperties}>
               <div className="award-image-wrap">
                 <Image src={award.image} alt={`Plaquinha CircusPay de ${award.value} em saques`} width={600} height={800}/>
                 {index > 0 && <span className="award-lock"><LockKeyhole size={18}/> Meta bloqueada</span>}
@@ -149,7 +166,7 @@ export default function Home() {
         <div className="award-note"><Sparkles size={18}/><div><strong>Conquistas que acompanham o seu crescimento</strong><span>O progresso de cada meta poderá ser acompanhado dentro do painel.</span></div></div>
       </section>
 
-      <section className="landing-cta">
+      <section className="landing-cta" data-reveal>
         <div className="cta-orbit" />
         <Image src="/circuspay-mark-transparent.png" width={90} height={90} alt="Logo CircusPay"/>
         <span>O PRÓXIMO RESULTADO COMEÇA AGORA</span>

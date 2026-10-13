@@ -18,8 +18,35 @@ export async function signIn(formData: FormData) {
   if (!parsed.success) redirect(withMessage("/login", "erro", "Confira seu e-mail e sua senha."));
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error?.code === "email_not_confirmed") {
+    redirect("/login?erro=" + encodeURIComponent("Seu e-mail ainda não foi confirmado. Confirme pelo link recebido ou solicite um novo abaixo.") + "&confirmar=1");
+  }
   if (error) redirect(withMessage("/login", "erro", "E-mail ou senha inválidos."));
   redirect("/dashboard");
+}
+
+export async function resendConfirmation(formData: FormData) {
+  const email = z.string().email().safeParse(formData.get("email"));
+  if (!email.success) {
+    redirect("/login?erro=" + encodeURIComponent("Informe o mesmo e-mail usado no cadastro.") + "&confirmar=1");
+  }
+
+  const supabase = await createClient();
+  const requestHeaders = await headers();
+  const origin = requestHeaders.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL;
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.data,
+    options: origin ? { emailRedirectTo: `${origin}/auth/callback?next=/onboarding` } : undefined,
+  });
+
+  if (error?.code === "over_email_send_rate_limit") {
+    redirect("/login?erro=" + encodeURIComponent("Aguarde um minuto antes de solicitar outro e-mail.") + "&confirmar=1");
+  }
+  if (error) {
+    redirect("/login?erro=" + encodeURIComponent("Não foi possível reenviar agora. Confira o e-mail e tente novamente.") + "&confirmar=1");
+  }
+  redirect(withMessage("/login", "sucesso", "Novo link enviado. Verifique também a caixa de spam."));
 }
 
 export async function signInAdmin(formData: FormData) {
