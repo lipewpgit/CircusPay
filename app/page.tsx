@@ -138,20 +138,6 @@ export default function Home() {
           </div>
           <p>As plaquinhas marcam os grandes momentos da sua operação. Cada meta considera o total de saques aprovados pela CircusPay.</p>
         </div>
-        <div className="award-100k-stage">
-          <div className="award-stage-number" aria-hidden="true">100K</div>
-          <div className="award-stage-copy">
-            <span><i /> DESTAQUE DA JORNADA</span>
-            <h3>A marca que muda<br/>o tamanho da operação.</h3>
-            <p>Ao atingir R$ 100 mil em saques aprovados, uma nova conquista é liberada no seu painel. Um marco feito para ser visto.</p>
-            <div className="award-stage-detail"><Trophy size={18}/><div><strong>Plaquinha de R$ 100 mil</strong><small>Desbloqueada pela meta real de saques</small></div></div>
-          </div>
-          <div className="award-stage-visual">
-            <div className="award-stage-halo" />
-            <Image src="/award-100k.webp" alt="Plaquinha CircusPay de R$ 100 mil" width={600} height={800} priority={false}/>
-            <span className="award-stage-badge"><LockKeyhole size={15}/> CONQUISTA PROTEGIDA</span>
-          </div>
-        </div>
         <div className="award-grid">
           {awards.map((award, index) => (
             <article key={award.value} className={index === 0 ? "award-active" : ""} style={{ "--award-index": index } as React.CSSProperties}>
