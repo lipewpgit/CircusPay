@@ -1,0 +1,26 @@
+import Link from "next/link";
+import { Building2, FileCheck2, ShieldCheck, Upload, WalletCards } from "lucide-react";
+import { submitOnboarding } from "@/app/actions/seller";
+import { Brand } from "@/components/brand";
+import { requireUser } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const query = await searchParams;
+  const { supabase, user } = await requireUser();
+  const [{ data: profile }, { data: seller }, { data: finance }, { data: documents }] = await Promise.all([
+    supabase.from("profiles").select("full_name,phone,account_type,document_number").eq("user_id", user.id).single(),
+    supabase.from("seller_accounts").select("trading_name,status,review_notes,submitted_at").eq("user_id", user.id).single(),
+    supabase.from("finance_accounts").select("holder_name,pix_key_type,pix_key,status").eq("user_id", user.id).maybeSingle(),
+    supabase.from("kyc_documents").select("id,original_name,document_type,status,created_at").order("created_at", { ascending: false }),
+  ]);
+  const locked = seller?.status === "pending" || seller?.status === "approved";
+  return <main className="onboarding-page"><header className="onboarding-header"><Brand compact/><Link href="/dashboard">Voltar ao painel</Link></header><div className="onboarding-wrap"><div className="onboarding-title"><span className="eyebrow">ATIVAÇÃO DA CONTA</span><h1>Prepare sua operação.</h1><p>Precisamos validar o titular antes de liberar produtos, checkouts e vendas.</p></div>{query.erro && <div className="banner error">{query.erro}</div>}{seller?.review_notes && <div className="banner error">Observação da análise: {seller.review_notes}</div>}
+    {locked ? <section className="review-state"><span><FileCheck2 size={30}/></span><h2>{seller.status === "approved" ? "Conta aprovada" : "Documentos em análise"}</h2><p>{seller.status === "approved" ? "Sua operação já está liberada para vender." : "Você será avisado quando a análise for concluída."}</p><div>{documents?.map(doc => <span key={doc.id}><FileCheck2 size={16}/>{doc.original_name} · {doc.status}</span>)}</div><Link className="gold-button" href="/dashboard">Ir para o painel</Link></section> : <form action={submitOnboarding} className="onboarding-form">
+      <section className="form-section"><div className="section-number">1</div><div className="section-fields"><div className="section-title"><Building2 size={21}/><div><h2>Dados do titular</h2><p>Use os dados do CPF ou CNPJ responsável.</p></div></div><div className="field-grid"><label><span>Nome completo ou razão social</span><input name="fullName" defaultValue={profile?.full_name ?? ""} required/></label><label><span>Telefone</span><input name="phone" defaultValue={profile?.phone ?? ""} placeholder="(11) 99999-9999" required/></label><label><span>Tipo de conta</span><select name="accountType" defaultValue={profile?.account_type ?? "cpf"}><option value="cpf">Pessoa física (CPF)</option><option value="cnpj">Pessoa jurídica (CNPJ)</option></select></label><label><span>CPF ou CNPJ</span><input name="documentNumber" defaultValue={profile?.document_number ?? ""} inputMode="numeric" required/></label><label className="full"><span>Nome da operação</span><input name="tradingName" defaultValue={seller?.trading_name ?? ""} placeholder="Ex.: Minha loja" required/></label></div></div></section>
+      <section className="form-section"><div className="section-number">2</div><div className="section-fields"><div className="section-title"><Upload size={21}/><div><h2>Documentos</h2><p>Arquivos privados de até 10 MB.</p></div></div><div className="upload-grid"><label className="file-box"><Upload size={23}/><strong>Documento com foto</strong><span>RG, CNH ou documento oficial</span><input type="file" name="identity" accept="image/jpeg,image/png,image/webp,application/pdf" required/></label><label className="file-box"><Upload size={23}/><strong>Selfie ou documento empresarial</strong><span>Selfie para CPF; contrato/cartão CNPJ para empresa</span><input type="file" name="extraDocument" accept="image/jpeg,image/png,image/webp,application/pdf" required/></label></div></div></section>
+      <section className="form-section"><div className="section-number">3</div><div className="section-fields"><div className="section-title"><WalletCards size={21}/><div><h2>Conta para saque</h2><p>A chave Pix deve pertencer ao titular.</p></div></div><div className="field-grid"><label><span>Nome do titular</span><input name="holderName" defaultValue={finance?.holder_name ?? profile?.full_name ?? ""} required/></label><label><span>Tipo da chave</span><select name="pixKeyType" defaultValue={finance?.pix_key_type ?? "cpf"}><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Chave aleatória</option></select></label><label className="full"><span>Chave Pix</span><input name="pixKey" defaultValue={finance?.pix_key ?? ""} required/></label></div><div className="privacy-row"><ShieldCheck size={18}/><span>O saque terá taxa fixa de R$ 3,50, descontada do valor solicitado.</span></div><button className="gold-button">Enviar para análise</button></div></section>
+    </form>}
+  </div></main>;
+}

@@ -1,0 +1,14 @@
+{
+  "id": "/",
+  "name": "CircusPay",
+  "short_name": "CircusPay",
+  "description": "Painel de pagamentos CircusPay",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "icons": [
+    { "src": "/circuspay-original-v5-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/circuspay-original-v5-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
