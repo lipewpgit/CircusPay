@@ -11,18 +11,16 @@ import {
   ShieldAlert,
   ShoppingBag,
   Sparkles,
-  Trophy,
-  Users,
   WalletCards,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { brl } from "@/lib/money";
 
 const awardTargets = [
-  { label: "10 mil", value: 1_000_000, short: "10K" },
-  { label: "100 mil", value: 10_000_000, short: "100K" },
-  { label: "500 mil", value: 50_000_000, short: "500K" },
-  { label: "1 milhão", value: 100_000_000, short: "1M" },
+  { label: "10 mil", value: 1_000_000, short: "10K", image: "/award-10k.webp" },
+  { label: "100 mil", value: 10_000_000, short: "100K", image: "/award-100k.webp" },
+  { label: "500 mil", value: 50_000_000, short: "500K", image: "/award-500k.webp" },
+  { label: "1 milhão", value: 100_000_000, short: "1M", image: "/award-1m.webp" },
 ];
 
 const methodMeta = {
@@ -37,9 +35,7 @@ function saoPauloDateKey(value: string | Date) {
 
 function saoPauloHour(value: string) {
   const hour = Number(new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    hour: "2-digit",
-    hour12: false,
+    timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false,
   }).format(new Date(value)).replace(/\D/g, ""));
   return hour === 24 ? 0 : hour;
 }
@@ -63,8 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const pendingGross = pendingPayments.reduce((sum, payment) => sum + Number(payment.gross_cents), 0);
   const averageTicket = approvedPayments.length ? Math.round(gross / approvedPayments.length) : 0;
   const refundRate = approvedPayments.length + refundedPayments.length
-    ? Math.round((refundedPayments.length / (approvedPayments.length + refundedPayments.length)) * 1000) / 10
-    : 0;
+    ? Math.round((refundedPayments.length / (approvedPayments.length + refundedPayments.length)) * 1000) / 10 : 0;
   const conversion = allPayments.length ? Math.round((approvedPayments.length / allPayments.length) * 1000) / 10 : 0;
 
   const todayKey = saoPauloDateKey(new Date());
@@ -73,128 +68,118 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const chartHours = [0, 4, 8, 12, 16, 20];
   const chart = chartHours.map((start) => ({
     label: `${String(start).padStart(2, "0")}:00`,
-    value: todayApproved
-      .filter((payment) => {
-        const hour = saoPauloHour(payment.created_at);
-        return hour >= start && hour < start + 4;
-      })
-      .reduce((sum, payment) => sum + Number(payment.gross_cents), 0),
+    value: todayApproved.filter((payment) => {
+      const hour = saoPauloHour(payment.created_at);
+      return hour >= start && hour < start + 4;
+    }).reduce((sum, payment) => sum + Number(payment.gross_cents), 0),
   }));
   const chartMax = Math.max(...chart.map((item) => item.value), 1);
+  const graphPoints = chart.map((item, index) => {
+    const x = 5 + index * 19;
+    const y = 78 - (item.value / chartMax) * 58;
+    return `${x},${y}`;
+  }).join(" ");
 
   const methods = (Object.keys(methodMeta) as Array<keyof typeof methodMeta>).map((key) => {
     const count = approvedPayments.filter((payment) => payment.method === key).length;
     return { key, count, share: approvedPayments.length ? (count / approvedPayments.length) * 100 : 0, ...methodMeta[key] };
   });
-
-  const nextAward = awardTargets.find((award) => gross < award.value) ?? awardTargets[awardTargets.length - 1];
+  const nextAwardIndex = Math.max(0, awardTargets.findIndex((award) => gross < award.value));
+  const nextAward = awardTargets[nextAwardIndex] ?? awardTargets[awardTargets.length - 1];
   const awardProgress = Math.min(100, (gross / nextAward.value) * 100);
 
-  return (
-    <div className="legacy-dashboard">
-      {query.sucesso && <div className="banner success">{query.sucesso}</div>}
-      {query.erro && <div className="banner error">Você não tem acesso a essa área.</div>}
+  const stats = [
+    { label: "Faturamento bruto", value: brl(gross), helper: "Volume aprovado", Icon: ShoppingBag },
+    { label: "Vendas aprovadas", value: String(approvedPayments.length), helper: `${todayApproved.length} hoje`, Icon: Sparkles },
+    { label: "Ticket médio", value: brl(averageTicket), helper: "Por venda aprovada", Icon: CreditCard },
+    { label: "Saldo pendente", value: brl(pendingGross), helper: `${pendingPayments.length} pagamentos`, Icon: Clock3 },
+    { label: "Saldo retido", value: brl(Number(balance?.held_cents ?? 0)), helper: "Em processamento", Icon: WalletCards },
+    { label: "Taxa de reembolso", value: `${refundRate.toLocaleString("pt-BR")}%`, helper: `${refundedPayments.length} ocorrências`, Icon: RotateCcw },
+  ];
 
-      <div className="ops-heading">
-        <div>
-          <span className="ops-kicker">CIRCUS PAY / OPERAÇÃO</span>
-          <h1>Visão geral da operação.</h1>
-          <p>Acompanhe vendas, volume e desempenho em um só painel.</p>
-        </div>
-        <div className="ops-actions">
-          <span className="test-badge"><i /> Ambiente de testes</span>
-          {approved && <Link className="red-action" href="/dashboard/produtos">Criar produto <ArrowUpRight size={17} /></Link>}
-        </div>
+  return (
+    <>
+      {query.sucesso && <div className="notice">{query.sucesso}</div>}
+      {query.erro && <div className="notice error">Você não tem acesso a essa área.</div>}
+
+      <div className="page-title">
+        <div><span className="eyebrow">VISÃO GERAL</span><h1>Dashboard</h1><p>Acompanhe os números da sua operação em tempo real.</p></div>
+        <Link className="secondary" href="/dashboard/produtos"><Package size={16} /> Criar produto</Link>
       </div>
 
       {!approved && (
-        <section className="approval-callout">
-          <span><ShieldAlert size={25} /></span>
-          <div>
-            <strong>{seller?.status === "pending" ? "Sua documentação está em análise" : seller?.status === "rejected" ? "Precisamos de novos documentos" : "Conclua seu cadastro para começar a vender"}</strong>
-            <p>{seller?.review_notes || "Produtos e checkouts são liberados depois que seus dados forem aprovados."}</p>
-          </div>
-          <Link href="/onboarding">{seller?.status === "pending" ? "Ver dados enviados" : "Enviar documentação"}</Link>
-        </section>
+        <div className="notice error">
+          <ShieldAlert size={18} />
+          <span><strong>{seller?.status === "pending" ? "Sua documentação está em análise." : "Conclua seu cadastro para começar a vender."}</strong> {seller?.review_notes || "Os checkouts são liberados após a aprovação."}</span>
+          <Link href="/onboarding">Ver cadastro →</Link>
+        </div>
       )}
 
-      <section className="ops-metrics">
-        <article><span>Faturamento bruto</span><strong>{brl(gross)}</strong><ShoppingBag size={20} /><small>Volume aprovado</small></article>
-        <article><span>Vendas aprovadas</span><strong>{approvedPayments.length}</strong><Sparkles size={20} /><small>{todayApproved.length} hoje</small></article>
-        <article><span>Ticket médio</span><strong>{brl(averageTicket)}</strong><CreditCard size={20} /><small>Por venda aprovada</small></article>
-        <article><span>Saldo pendente</span><strong>{brl(pendingGross)}</strong><Clock3 size={20} /><small>{pendingPayments.length} pagamentos</small></article>
-        <article><span>Saldo retido</span><strong>{brl(Number(balance?.held_cents ?? 0))}</strong><WalletCards size={20} /><small>Em processamento</small></article>
-        <article><span>Taxa de reembolso</span><strong>{refundRate.toLocaleString("pt-BR")}%</strong><RotateCcw size={20} /><small>{refundedPayments.length} ocorrências</small></article>
+      <section className="dashboard-stats">
+        {stats.map(({ label, value, helper, Icon }) => (
+          <article className="stat-card" key={label}>
+            <div><span>{label}</span><span className="stat-icon"><Icon size={18} /></span></div>
+            <strong>{value}</strong>
+            <small><span className="green-dot" />{helper}</small>
+          </article>
+        ))}
       </section>
 
-      <div className="ops-main-grid">
-        <section className="ops-panel performance-panel">
-          <div className="ops-panel-heading">
-            <div><span>DESEMPENHO</span><h2>Hoje</h2></div>
-            <strong>{brl(todayGross)}</strong>
+      <section className="dashboard-panels">
+        <article className="card performance-card">
+          <div className="section-head">
+            <div><span className="section-icon"><ShoppingBag size={17} /></span><div><strong>Desempenho de hoje</strong><small>Volume aprovado por horário</small></div></div>
+            <b>{brl(todayGross)}</b>
           </div>
           <div className="performance-chart">
-            {chart.map((item) => (
-              <div className="chart-column" key={item.label}>
-                <span>{item.value ? brl(item.value) : ""}</span>
-                <div><i style={{ height: `${Math.max(7, (item.value / chartMax) * 100)}%` }} /></div>
-                <small>{item.label}</small>
-              </div>
-            ))}
+            <span className="chart-value">{brl(chartMax)}</span>
+            <svg viewBox="0 0 100 90" preserveAspectRatio="none" aria-label="Gráfico de vendas">
+              <line x1="0" y1="20" x2="100" y2="20" /><line x1="0" y1="49" x2="100" y2="49" /><line x1="0" y1="78" x2="100" y2="78" />
+              <polyline points={graphPoints} />
+              {chart.map((item, index) => <circle key={item.label} cx={5 + index * 19} cy={78 - (item.value / chartMax) * 58} r="1.6" />)}
+            </svg>
+            <div className="chart-times">{chart.map((item) => <span key={item.label}>{item.label}</span>)}</div>
           </div>
-        </section>
+        </article>
 
-        <section className="ops-panel conversion-panel">
-          <div className="ops-panel-heading"><div><span>CONVERSÃO</span><h2>Performance do checkout</h2></div></div>
-          <div className="conversion-ring" style={{ "--conversion": `${conversion * 3.6}deg` } as React.CSSProperties}>
-            <div><strong>{conversion.toLocaleString("pt-BR")}%</strong><small>conversão</small></div>
+        <article className="card awards-card">
+          <div className="section-head">
+            <div><span className="section-icon"><Sparkles size={17} /></span><div><strong>Premiações</strong><small>Metas da sua jornada</small></div></div>
           </div>
-          <p>{approvedPayments.length} de {allPayments.length} tentativas aprovadas</p>
-        </section>
-      </div>
+          <div className="award-showcase">
+            <img src={nextAward.image} alt={`Placa CircusPay ${nextAward.label}`} />
+            <span>{nextAward.short}</span>
+          </div>
+          <div className="award-progress"><i style={{ width: `${awardProgress}%` }} /></div>
+          <div className="award-meta"><span>Próxima placa</span><strong>{brl(gross)} / {brl(nextAward.value)}</strong></div>
+          <div className="award-dots">{awardTargets.map((award, index) => <span className={index === nextAwardIndex ? "active" : ""} key={award.short} />)}</div>
+        </article>
 
-      <section className="ops-panel awards-panel">
-        <div className="ops-panel-heading">
-          <div><span>PREMIAÇÕES</span><h2>Sua jornada CircusPay</h2><p>As placas ficam sempre visíveis. A conquista é liberada ao atingir cada meta.</p></div>
-          <div className="award-next"><small>Próxima premiação</small><strong>{nextAward.short}</strong></div>
-        </div>
-        <div className="award-track">
-          {awardTargets.map((award) => {
-            const unlocked = gross >= award.value;
-            return (
-              <article className={unlocked ? "unlocked" : ""} key={award.value}>
-                <div className="plaque-art"><Trophy size={28} /><b>{award.short}</b><small>EM SAQUES</small></div>
-                <div><strong>Placa de {award.label}</strong><small>{unlocked ? "Conquistada" : `Meta de ${brl(award.value)}`}</small></div>
-              </article>
-            );
-          })}
-        </div>
-        <div className="award-progress-copy"><span>Progresso para {nextAward.short}</span><strong>{brl(gross)} / {brl(nextAward.value)}</strong></div>
-        <div className="award-progress"><i style={{ width: `${awardProgress}%` }} /></div>
+        <article className="card payments-card">
+          <div className="section-head">
+            <div><span className="section-icon"><CreditCard size={17} /></span><div><strong>Meios de pagamento</strong><small>Distribuição das vendas</small></div></div>
+          </div>
+          {methods.map(({ key, label, Icon, count, share }) => (
+            <div className="payment-row" key={key}>
+              <span><Icon size={17} /></span>
+              <div><strong>{label}</strong><small>{count} {count === 1 ? "venda" : "vendas"}</small></div>
+              <b>{share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</b>
+            </div>
+          ))}
+          <div className="conversion-box"><span>Conversão do checkout</span><strong>{conversion.toLocaleString("pt-BR")}%</strong><div><i style={{ width: `${conversion}%` }} /></div></div>
+        </article>
       </section>
 
-      <div className="ops-lower-grid">
-        <section className="ops-panel payments-panel">
-          <div className="ops-panel-heading"><div><span>MEIOS DE PAGAMENTO</span><h2>Distribuição das vendas</h2></div></div>
-          <div className="payment-methods">
-            {methods.map(({ key, label, Icon, count, share }) => (
-              <article key={key}>
-                <span><Icon size={18} /></span>
-                <div><strong>{label}</strong><small>{count} {count === 1 ? "venda" : "vendas"}</small></div>
-                <b>{share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</b>
-                <i><em style={{ width: `${share}%` }} /></i>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="ops-panel quick-panel">
-          <div className="ops-panel-heading"><div><span>ATALHOS</span><h2>Gerencie sua operação</h2></div></div>
-          <Link href="/dashboard/produtos"><span><Package size={19} /></span><div><strong>Criar produto</strong><small>Defina o valor e gere seu checkout</small></div><ArrowUpRight size={17} /></Link>
-          <Link href="/dashboard/financeiro"><span><Landmark size={19} /></span><div><strong>Financeiro</strong><small>Saldo disponível: {brl(Number(balance?.available_cents ?? 0))}</small></div><ArrowUpRight size={17} /></Link>
-          <Link href="/dashboard/vendas"><span><Users size={19} /></span><div><strong>Vendas recentes</strong><small>Acompanhe pagamentos em tempo real</small></div><ArrowUpRight size={17} /></Link>
-        </section>
-      </div>
-    </div>
+      <section className="card dashboard-bottom-card">
+        <div>
+          <span className="section-icon"><Landmark size={18} /></span>
+          <div><strong>Comece sua operação</strong><p>{productCount ? `Você possui ${productCount} produto(s) cadastrado(s).` : "Crie seu primeiro produto, defina o valor e gere um checkout."}</p></div>
+        </div>
+        <div>
+          <span>Saldo disponível <strong>{brl(Number(balance?.available_cents ?? 0))}</strong></span>
+          <Link href="/dashboard/produtos">Ir para produtos <ArrowUpRight size={16} /></Link>
+        </div>
+      </section>
+    </>
   );
 }
