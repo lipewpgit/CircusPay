@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { isValidDocument, normalizeDocument } from "@/lib/br-documents";
 
 function withMessage(path: string, key: "erro" | "sucesso", message: string) {
   const separator = path.includes("?") ? "&" : "?";
@@ -23,18 +24,48 @@ function getSiteUrl(requestHeaders: Headers) {
 
 export async function signIn(formData: FormData) {
   const parsed = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
+    identifier: z.string().trim().min(5).max(160),
+    password: z.string().min(8).max(72),
   }).safeParse(Object.fromEntries(formData));
 
-  if (!parsed.success) redirect(withMessage("/login", "erro", "Confira seu e-mail e sua senha."));
+  if (!parsed.success) redirect(withMessage("/login", "erro", "Confira seu CPF/CNPJ e sua senha."));
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  let email = parsed.data.identifier.toLowerCase();
+
+  if (!email.includes("@")) {
+    const document = normalizeDocument(parsed.data.identifier);
+    if (!isValidDocument(document)) redirect(withMessage("/login", "erro", "CPF/CNPJ ou senha inválidos."));
+
+    const secretKey = process.env.SUPABASE_SECRET_KEY;
+    if (!secretKey) {
+      redirect(withMessage("/login", "erro", "O acesso por CPF/CNPJ está sendo configurado. Por enquanto, entre com seu e-mail."));
+    }
+
+    const admin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      secretKey,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: profile } = await admin.from("profiles").select("user_id").eq("document_number", document).maybeSingle();
+    if (!profile?.user_id) redirect(withMessage("/login", "erro", "CPF/CNPJ ou senha inválidos."));
+
+    const { data: account } = await admin.auth.admin.getUserById(profile.user_id);
+    if (!account.user?.email) redirect(withMessage("/login", "erro", "CPF/CNPJ ou senha inválidos."));
+    email = account.user.email;
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
   if (error?.code === "email_not_confirmed") {
     redirect("/login?erro=" + encodeURIComponent("Seu e-mail ainda não foi confirmado. Confirme pelo link recebido ou solicite um novo abaixo.") + "&confirmar=1");
   }
-  if (error) redirect(withMessage("/login", "erro", "E-mail ou senha inválidos."));
-  redirect("/dashboard");
+  if (error) redirect(withMessage("/login", "erro", "CPF/CNPJ ou senha inválidos."));
+
+  const { data: seller } = await supabase.from("seller_accounts").select("status").single();
+  if (seller?.status === "suspended") {
+    await supabase.auth.signOut();
+    redirect(withMessage("/login", "erro", "Esta conta está suspensa. Fale com o suporte da CircusPay."));
+  }
+  redirect(seller?.status === "approved" ? "/dashboard" : "/onboarding");
 }
 
 export async function resendConfirmation(formData: FormData) {
@@ -120,12 +151,17 @@ export async function activateAdmin(formData: FormData) {
 export async function signUp(formData: FormData) {
   const parsed = z.object({
     fullName: z.string().trim().min(3).max(120),
+    tradingName: z.string().trim().min(2).max(120),
+    phone: z.string().transform((value) => value.replace(/\D/g, "")).refine((value) => value.length >= 10 && value.length <= 13),
+    documentNumber: z.string().transform(normalizeDocument),
     email: z.string().email(),
     password: z.string().min(8).max(72),
     accountType: z.enum(["cpf", "cnpj"]),
   }).safeParse(Object.fromEntries(formData));
 
-  if (!parsed.success) redirect(withMessage("/cadastro", "erro", "Preencha todos os campos. A senha precisa ter 8 caracteres."));
+  if (!parsed.success || !isValidDocument(parsed.data.documentNumber, parsed.data.accountType)) {
+    redirect(withMessage("/cadastro", "erro", "Confira seus dados. Informe um CPF/CNPJ válido e uma senha com pelo menos 8 caracteres."));
+  }
 
   const supabase = await createClient();
   const requestHeaders = await headers();
@@ -135,7 +171,13 @@ export async function signUp(formData: FormData) {
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=/onboarding`,
-      data: { full_name: parsed.data.fullName, account_type: parsed.data.accountType },
+      data: {
+        full_name: parsed.data.fullName,
+        trading_name: parsed.data.tradingName,
+        phone: parsed.data.phone,
+        document_number: parsed.data.documentNumber,
+        account_type: parsed.data.accountType,
+      },
     },
   });
 
@@ -148,7 +190,7 @@ export async function signUp(formData: FormData) {
   if (error?.code === "user_already_exists" || error?.code === "email_exists") {
     redirect(withMessage("/login", "sucesso", "Este e-mail já possui um cadastro. Entre na conta ou use a recuperação de senha."));
   }
-  if (error) redirect(withMessage("/cadastro", "erro", "Não foi possível criar a conta. Confira os dados e tente novamente."));
+  if (error) redirect(withMessage("/cadastro", "erro", "Não foi possível criar a conta. O e-mail ou CPF/CNPJ pode já estar cadastrado."));
   if (data.user?.identities?.length === 0) {
     redirect(withMessage("/login", "sucesso", "Este e-mail já possui um cadastro. Entre na conta ou use a recuperação de senha."));
   }
