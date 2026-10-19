@@ -18,6 +18,7 @@ import { signOut } from "@/app/actions/auth";
 import { Brand } from "@/components/brand";
 import { createClient } from "@/lib/supabase/server";
 import { reviewDocument, reviewSeller, updateWithdrawal } from "@/app/admin/actions";
+import { formatDocument } from "@/lib/br-documents";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   if (isAdmin !== true) redirect("/admin/login?erro=" + encodeURIComponent("Esta conta não possui acesso administrativo."));
 
   const [profilesResult, sellersResult, withdrawalsResult, paymentsResult, documentsResult, auditResult] = await Promise.all([
-    supabase.from("profiles").select("user_id,full_name,account_type,document_last4,phone,created_at").order("created_at", { ascending: false }),
+    supabase.from("profiles").select("user_id,full_name,email,account_type,document_number,document_last4,phone,created_at").order("created_at", { ascending: false }),
     supabase.from("seller_accounts").select("user_id,trading_name,status,submitted_at,reviewed_at,created_at").order("created_at", { ascending: false }),
     supabase.from("withdrawal_requests").select("id,seller_id,requested_cents,fee_cents,net_cents,status,requested_at,processed_at").order("requested_at", { ascending: false }).limit(30),
     supabase.from("payments").select("id,seller_id,method,gross_cents,net_cents,status,paid_at,created_at").order("created_at", { ascending: false }).limit(30),
@@ -125,11 +126,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
           <section className="admin-block" id="sellers">
             <div className="admin-block-head"><div><span>CADASTROS</span><h2>Análise de sellers</h2></div><b>{sellers.length}</b></div>
-            <div className="admin-table-wrap"><table><thead><tr><th>Seller</th><th>Conta</th><th>Documento</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>
-              {sellers.length === 0 && <tr><td colSpan={6} className="admin-empty">Nenhum seller cadastrado ainda.</td></tr>}
+            <div className="admin-table-wrap"><table><thead><tr><th>Seller</th><th>Contato</th><th>Conta</th><th>Documento</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>
+              {sellers.length === 0 && <tr><td colSpan={7} className="admin-empty">Nenhum seller cadastrado ainda.</td></tr>}
               {sellers.map((seller) => { const profile = profileById.get(seller.user_id); return <tr key={seller.user_id}>
                 <td><strong>{profile?.full_name ?? seller.trading_name ?? "Seller"}</strong><small>{seller.trading_name || "Nome comercial não informado"}</small></td>
-                <td>{profile?.account_type?.toUpperCase() ?? "—"}</td><td>{profile?.document_last4 ? `Final ${profile.document_last4}` : "Pendente"}</td><td><Status value={seller.status} /></td><td>{dateTime(seller.created_at)}</td>
+                <td><strong>{profile?.email ?? "—"}</strong><small>{profile?.phone ?? "Telefone não informado"}</small></td>
+                <td>{profile?.account_type?.toUpperCase() ?? "—"}</td><td>{profile?.document_number ? formatDocument(profile.document_number) : "Pendente"}</td><td><Status value={seller.status} /></td><td>{dateTime(seller.created_at)}</td>
                 <td><form action={reviewSeller} className="admin-actions"><input type="hidden" name="userId" value={seller.user_id}/><button name="decision" value="approved" className="approve" title="Aprovar"><CheckCircle2 size={15}/></button><button name="decision" value="rejected" className="reject" title="Rejeitar"><XCircle size={15}/></button></form></td>
               </tr>; })}
             </tbody></table></div>
