@@ -11,6 +11,7 @@ export default function NewPasswordPage() {
   const [message, setMessage] = useState("");
   const [isReady, setIsReady] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [returnTo, setReturnTo] = useState("/dashboard");
   const router = useRouter();
 
   useEffect(() => {
@@ -18,6 +19,9 @@ export default function NewPasswordPage() {
 
     async function restoreRecoverySession() {
       const supabase = createClient();
+      const requestedReturn = new URLSearchParams(window.location.search).get("next");
+      const safeReturn = requestedReturn === "/admin" ? "/admin" : "/dashboard";
+      if (active) setReturnTo(safeReturn);
       const hash = new URLSearchParams(window.location.hash.slice(1));
       const accessToken = hash.get("access_token");
       const refreshToken = hash.get("refresh_token");
@@ -39,7 +43,7 @@ export default function NewPasswordPage() {
           return;
         }
 
-        window.history.replaceState(null, "", "/nova-senha");
+        window.history.replaceState(null, "", `/nova-senha?next=${encodeURIComponent(safeReturn)}`);
         if (active) setIsReady(true);
         return;
       }
@@ -71,14 +75,15 @@ export default function NewPasswordPage() {
       setIsSaving(false);
       return setMessage("Não foi possível atualizar a senha. Solicite um novo link e tente novamente.");
     }
-    router.replace("/dashboard");
+    router.replace(returnTo);
   }
 
   return (
     <AuthShell
+      variant={returnTo === "/admin" ? "admin" : undefined}
       title="Crie uma nova senha"
       description={isReady ? "Link validado. Agora escolha uma senha forte para sua conta." : "Validando seu link de recuperação..."}
-      footer={<Link href="/login">Voltar para entrar</Link>}
+      footer={<Link href={returnTo === "/admin" ? "/admin/login" : "/login"}>Voltar para entrar</Link>}
     >
       {message && <div className="form-alert error">{message}</div>}
       <form action={updatePassword} className="auth-form">
