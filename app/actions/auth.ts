@@ -7,7 +7,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 function withMessage(path: string, key: "erro" | "sucesso", message: string) {
-  return `${path}?${key}=${encodeURIComponent(message)}`;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}${key}=${encodeURIComponent(message)}`;
 }
 
 function getSiteUrl(requestHeaders: Headers) {
@@ -100,7 +101,7 @@ export async function activateAdmin(formData: FormData) {
   const supabase = await createClient();
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL!;
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -110,6 +111,9 @@ export async function activateAdmin(formData: FormData) {
   });
 
   if (error) redirect(withMessage("/admin/ativar", "erro", "Não foi possível ativar o acesso. Tente novamente ou recupere a senha."));
+  if (data.user?.identities?.length === 0) {
+    redirect(withMessage("/admin/login", "sucesso", "O acesso administrativo já existe. Entre com sua senha ou use a recuperação de senha."));
+  }
   redirect(withMessage("/admin/login", "sucesso", "Ativação solicitada. Confirme o e-mail recebido e depois entre no painel."));
 }
 
@@ -152,8 +156,13 @@ export async function signUp(formData: FormData) {
 }
 
 export async function requestPasswordReset(formData: FormData) {
+  const returnTo = formData.get("next") === "/admin" ? "/admin" : "/dashboard";
+  const recoveryPath = returnTo === "/admin"
+    ? "/recuperar-senha?next=%2Fadmin"
+    : "/recuperar-senha";
+  const loginPath = returnTo === "/admin" ? "/admin/login" : "/login";
   const email = z.string().email().safeParse(formData.get("email"));
-  if (!email.success) redirect(withMessage("/recuperar-senha", "erro", "Informe um e-mail válido."));
+  if (!email.success) redirect(withMessage(recoveryPath, "erro", "Informe um e-mail válido."));
 
   // Recovery links are commonly opened by the mail app in a different browser.
   // The implicit flow carries the recovery session in the URL fragment, avoiding
@@ -173,19 +182,19 @@ export async function requestPasswordReset(formData: FormData) {
   const requestHeaders = await headers();
   const origin = getSiteUrl(requestHeaders);
   const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
-    redirectTo: `${origin}/nova-senha`,
+    redirectTo: `${origin}/nova-senha?next=${encodeURIComponent(returnTo)}`,
   });
 
   if (error?.code === "over_email_send_rate_limit") {
     const message = error.message.toLowerCase().includes("email rate limit exceeded")
       ? "O serviço de e-mail atingiu o limite de envios. Tente novamente mais tarde."
       : "Aguarde um minuto antes de solicitar outro link.";
-    redirect(withMessage("/recuperar-senha", "erro", message));
+    redirect(withMessage(recoveryPath, "erro", message));
   }
   if (error) {
-    redirect(withMessage("/recuperar-senha", "erro", "Não foi possível enviar o link agora. Tente novamente."));
+    redirect(withMessage(recoveryPath, "erro", "Não foi possível enviar o link agora. Tente novamente."));
   }
-  redirect(withMessage("/login", "sucesso", "Se o e-mail estiver cadastrado, você receberá o link de recuperação."));
+  redirect(withMessage(loginPath, "sucesso", "Se o e-mail estiver cadastrado, você receberá o link de recuperação."));
 }
 
 export async function signOut() {
