@@ -1,9 +1,9 @@
 import "./legacy.css";
-import { requireUser } from "@/lib/auth";
+import { requireApprovedSeller } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await requireUser();
+  await requireApprovedSeller();
   return children;
 }
