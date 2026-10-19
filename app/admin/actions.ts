@@ -15,9 +15,9 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
-function finish(message: string, error = false) {
+function finish(message: string, error = false): never {
   revalidatePath("/admin");
-  redirect(`/admin?${error ? "erro" : "sucesso"}=${encodeURIComponent(message)}`);
+  return redirect(`/admin?${error ? "erro" : "sucesso"}=${encodeURIComponent(message)}`);
 }
 
 export async function reviewSeller(formData: FormData) {
