@@ -6,7 +6,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { supabase } = await requireAdmin();
   const { data: document } = await supabase.from("kyc_documents").select("storage_path").eq("id", id).single();
   if (!document) return new NextResponse("Documento não encontrado", { status: 404 });
-  const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(document.storage_path, 60);
+  const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(document.storage_path, 300);
   if (error || !data) return new NextResponse("Não foi possível abrir o documento", { status: 500 });
-  return NextResponse.redirect(data.signedUrl);
+  const response = NextResponse.redirect(data.signedUrl);
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 }

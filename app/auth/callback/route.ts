@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -9,9 +9,10 @@ export async function GET(request: Request) {
     : "/dashboard";
 
   if (code) {
-    const supabase = await createClient();
+    const supabase = next === "/admin" ? await createAdminClient() : await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL(next, url.origin));
   }
-  return NextResponse.redirect(new URL("/login?erro=Link inválido ou expirado.", url.origin));
+  const errorPath = next === "/admin" ? "/admin/login" : "/login";
+  return NextResponse.redirect(new URL(`${errorPath}?erro=${encodeURIComponent("Link inválido ou expirado.")}`, url.origin));
 }

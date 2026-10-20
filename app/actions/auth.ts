@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { isValidDocument, normalizeDocument } from "@/lib/br-documents";
 
 function withMessage(path: string, key: "erro" | "sucesso", message: string) {
@@ -54,13 +54,24 @@ export async function signIn(formData: FormData) {
     email = account.user.email;
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password: parsed.data.password });
   if (error?.code === "email_not_confirmed") {
     redirect("/login?erro=" + encodeURIComponent("Seu e-mail ainda não foi confirmado. Confirme pelo link recebido ou solicite um novo abaixo.") + "&confirmar=1");
   }
   if (error) redirect(withMessage("/login", "erro", "CPF/CNPJ ou senha inválidos."));
 
-  const { data: seller } = await supabase.from("seller_accounts").select("status").single();
+  const [{ data: isAdmin }, { data: seller }] = await Promise.all([
+    supabase.rpc("is_admin"),
+    supabase.from("seller_accounts").select("status").eq("user_id", signInData.user?.id ?? "").maybeSingle(),
+  ]);
+  if (isAdmin === true) {
+    await supabase.auth.signOut();
+    redirect(withMessage("/admin/login", "erro", "Use o acesso administrativo para entrar com esta conta."));
+  }
+  if (!seller) {
+    await supabase.auth.signOut();
+    redirect(withMessage("/login", "erro", "Esta conta não possui um cadastro seller."));
+  }
   if (seller?.status === "suspended") {
     await supabase.auth.signOut();
     redirect(withMessage("/login", "erro", "Esta conta está suspensa. Fale com o suporte da CircusPay."));
@@ -103,7 +114,7 @@ export async function signInAdmin(formData: FormData) {
 
   if (!parsed.success) redirect(withMessage("/admin/login", "erro", "Confira seu e-mail e sua senha."));
 
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) redirect(withMessage("/admin/login", "erro", "E-mail ou senha inválidos."));
 
@@ -129,7 +140,7 @@ export async function activateAdmin(formData: FormData) {
     redirect(withMessage("/admin/ativar", "erro", "Este e-mail não está autorizado para o painel administrativo."));
   }
 
-  const supabase = await createClient();
+  const supabase = await createAdminClient();
   const requestHeaders = await headers();
   const origin = requestHeaders.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL!;
   const { data, error } = await supabase.auth.signUp({
@@ -243,4 +254,10 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function signOutAdmin() {
+  const supabase = await createAdminClient();
+  await supabase.auth.signOut();
+  redirect("/admin/login");
 }

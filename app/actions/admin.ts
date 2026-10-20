@@ -15,7 +15,11 @@ export async function reviewSeller(formData: FormData) {
     decision,
     notes: notes || null,
   });
+  if (error?.message.includes("DOCUMENTS_MISSING")) redirect("/admin?erro=O seller precisa enviar os dois documentos antes da aprovação.");
+  if (error?.message.includes("FINANCE_ACCOUNT_MISSING")) redirect("/admin?erro=O seller precisa cadastrar uma chave Pix antes da aprovação.");
   if (error) redirect("/admin?erro=Não foi possível atualizar o seller.");
+  const { data: updatedSeller } = await supabase.from("seller_accounts").select("status").eq("user_id", userId).single();
+  if (updatedSeller?.status !== decision) redirect("/admin?erro=A atualização não foi confirmada.");
   revalidatePath("/admin");
   redirect("/admin?sucesso=Seller atualizado.");
 }

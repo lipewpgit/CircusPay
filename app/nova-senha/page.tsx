@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
-import { createClient } from "@/lib/supabase/client";
+import { createAdminClient, createClient } from "@/lib/supabase/client";
 
 export default function NewPasswordPage() {
   const [message, setMessage] = useState("");
@@ -18,9 +18,9 @@ export default function NewPasswordPage() {
     let active = true;
 
     async function restoreRecoverySession() {
-      const supabase = createClient();
       const requestedReturn = new URLSearchParams(window.location.search).get("next");
       const safeReturn = requestedReturn === "/admin" ? "/admin" : "/dashboard";
+      const supabase = safeReturn === "/admin" ? createAdminClient() : createClient();
       if (active) setReturnTo(safeReturn);
       const hash = new URLSearchParams(window.location.hash.slice(1));
       const accessToken = hash.get("access_token");
@@ -69,7 +69,7 @@ export default function NewPasswordPage() {
 
     setIsSaving(true);
     setMessage("");
-    const supabase = createClient();
+    const supabase = returnTo === "/admin" ? createAdminClient() : createClient();
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
       setIsSaving(false);

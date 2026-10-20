@@ -3,17 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
-  if (isAdmin !== true) redirect("/admin/login?erro=" + encodeURIComponent("Acesso administrativo não autorizado."));
-  return { supabase, user };
-}
+import { requireAdmin } from "@/lib/auth";
 
 function finish(message: string, error = false): never {
   revalidatePath("/admin");
@@ -33,7 +23,11 @@ export async function reviewSeller(formData: FormData) {
     decision: parsed.data.decision,
     notes: null,
   });
-  if (error) finish("Não foi possível atualizar o seller.", true);
+  if (error?.message.includes("DOCUMENTS_MISSING")) finish("O seller precisa enviar os dois documentos antes da aprovação.", true);
+  if (error?.message.includes("FINANCE_ACCOUNT_MISSING")) finish("O seller precisa cadastrar uma chave Pix antes da aprovação.", true);
+  if (error) finish("Não foi possível atualizar o seller. Tente novamente.", true);
+  const { data: updatedSeller } = await supabase.from("seller_accounts").select("status").eq("user_id", parsed.data.userId).single();
+  if (updatedSeller?.status !== parsed.data.decision) finish("A atualização não foi confirmada. Recarregue e tente novamente.", true);
   finish(parsed.data.decision === "approved" ? "Seller aprovado com sucesso." : "Status do seller atualizado.");
 }
 
@@ -62,7 +56,7 @@ export async function reviewDocument(formData: FormData) {
   if (!parsed.success) finish("Documento inválido.", true);
 
   const { supabase, user } = await requireAdmin();
-  const { error } = await supabase
+  const { data: updatedDocument, error } = await supabase
     .from("kyc_documents")
     .update({
       status: parsed.data.status,
@@ -70,7 +64,9 @@ export async function reviewDocument(formData: FormData) {
       reviewed_by: user.id,
       rejection_reason: parsed.data.status === "approved" ? null : "Documento precisa de nova análise.",
     })
-    .eq("id", parsed.data.documentId);
-  if (error) finish("Não foi possível revisar o documento.", true);
+    .eq("id", parsed.data.documentId)
+    .select("id,status")
+    .single();
+  if (error || updatedDocument?.status !== parsed.data.status) finish("Não foi possível revisar o documento.", true);
   finish(parsed.data.status === "approved" ? "Documento aprovado." : "Documento devolvido para correção.");
 }

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { submitOnboarding } from "@/app/actions/seller";
 import { Brand } from "@/components/brand";
-import { requireUser } from "@/lib/auth";
+import { requireSeller } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ function documentStatus(status: string) {
 
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const query = await searchParams;
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireSeller();
   const [{ data: profile }, { data: seller }, { data: finance }, { data: documents }] = await Promise.all([
     supabase.from("profiles").select("full_name,phone,account_type,document_number").eq("user_id", user.id).single(),
     supabase.from("seller_accounts").select("trading_name,status,review_notes,submitted_at").eq("user_id", user.id).single(),

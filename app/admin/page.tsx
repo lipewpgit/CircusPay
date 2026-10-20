@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   Activity,
   BadgeCheck,
   CheckCircle2,
   Clock3,
   FileCheck2,
+  Eye,
   LayoutDashboard,
   LogOut,
   ReceiptText,
@@ -14,11 +14,11 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import { signOut } from "@/app/actions/auth";
+import { signOutAdmin } from "@/app/actions/auth";
 import { Brand } from "@/components/brand";
-import { createClient } from "@/lib/supabase/server";
 import { reviewDocument, reviewSeller, updateWithdrawal } from "@/app/admin/actions";
 import { formatDocument } from "@/lib/br-documents";
+import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -53,12 +53,7 @@ function Status({ value }: { value: string }) {
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const query = await searchParams;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
-  if (isAdmin !== true) redirect("/admin/login?erro=" + encodeURIComponent("Esta conta não possui acesso administrativo."));
+  const { supabase, user } = await requireAdmin();
 
   const [profilesResult, sellersResult, withdrawalsResult, paymentsResult, documentsResult, auditResult] = await Promise.all([
     supabase.from("profiles").select("user_id,full_name,email,account_type,document_number,document_last4,phone,created_at").order("created_at", { ascending: false }),
@@ -98,14 +93,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <div className="admin-console-user">
           <span>Administrador</span>
           <small>{user.email}</small>
-          <form action={signOut}><button type="submit"><LogOut size={15} /> Sair</button></form>
+          <form action={signOutAdmin}><button type="submit"><LogOut size={15} /> Sair</button></form>
         </div>
       </aside>
 
       <section className="admin-console-main">
         <header className="admin-console-topbar">
           <div><span>ADMINISTRAÇÃO</span><strong>CircusPay Control</strong></div>
-          <Link href="/dashboard">Abrir painel seller</Link>
+          <Link href="/login" target="_blank" rel="noreferrer">Abrir login seller</Link>
         </header>
 
         <div className="admin-console-content" id="visao">
@@ -132,7 +127,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 <td><strong>{profile?.full_name ?? seller.trading_name ?? "Seller"}</strong><small>{seller.trading_name || "Nome comercial não informado"}</small></td>
                 <td><strong>{profile?.email ?? "—"}</strong><small>{profile?.phone ?? "Telefone não informado"}</small></td>
                 <td>{profile?.account_type?.toUpperCase() ?? "—"}</td><td>{profile?.document_number ? formatDocument(profile.document_number) : "Pendente"}</td><td><Status value={seller.status} /></td><td>{dateTime(seller.created_at)}</td>
-                <td><form action={reviewSeller} className="admin-actions"><input type="hidden" name="userId" value={seller.user_id}/><button name="decision" value="approved" className="approve" title="Aprovar"><CheckCircle2 size={15}/></button><button name="decision" value="rejected" className="reject" title="Rejeitar"><XCircle size={15}/></button></form></td>
+                <td>{seller.status === "pending" ? <form action={reviewSeller} className="admin-actions"><input type="hidden" name="userId" value={seller.user_id}/><button name="decision" value="approved" className="approve" title="Aprovar seller"><CheckCircle2 size={15}/></button><button name="decision" value="rejected" className="reject" title="Solicitar correção"><XCircle size={15}/></button></form> : <small>{seller.status === "onboarding" ? "Aguardando envio" : "Sem ação pendente"}</small>}</td>
               </tr>; })}
             </tbody></table></div>
           </section>
@@ -141,7 +136,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <div className="admin-block-head"><div><span>KYC</span><h2>Documentos enviados</h2></div><b>{pendingDocuments.length} pendentes</b></div>
             <div className="admin-table-wrap"><table><thead><tr><th>Seller</th><th>Documento</th><th>Arquivo</th><th>Status</th><th>Envio</th><th>Ações</th></tr></thead><tbody>
               {documents.length === 0 && <tr><td colSpan={6} className="admin-empty">Nenhum documento enviado.</td></tr>}
-              {documents.map((document) => <tr key={document.id}><td><strong>{profileById.get(document.user_id)?.full_name ?? "Seller"}</strong></td><td>{document.document_type.replaceAll("_", " ")}</td><td>{document.original_name}</td><td><Status value={document.status}/></td><td>{dateTime(document.created_at)}</td><td><form action={reviewDocument} className="admin-actions"><input type="hidden" name="documentId" value={document.id}/><button name="status" value="approved" className="approve" title="Aprovar"><CheckCircle2 size={15}/></button><button name="status" value="resubmission" className="reject" title="Solicitar reenvio"><XCircle size={15}/></button></form></td></tr>)}
+              {documents.map((document) => <tr key={document.id}><td><strong>{profileById.get(document.user_id)?.full_name ?? "Seller"}</strong></td><td>{document.document_type.replaceAll("_", " ")}</td><td><strong>{document.original_name}</strong><Link className="admin-document-link" href={`/admin/documentos/${document.id}`} target="_blank" rel="noreferrer"><Eye size={13}/> Visualizar documento</Link></td><td><Status value={document.status}/></td><td>{dateTime(document.created_at)}</td><td>{document.status === "pending" || document.status === "resubmission" ? <form action={reviewDocument} className="admin-actions"><input type="hidden" name="documentId" value={document.id}/><button name="status" value="approved" className="approve" title="Aprovar documento"><CheckCircle2 size={15}/></button><button name="status" value="resubmission" className="reject" title="Solicitar reenvio"><XCircle size={15}/></button></form> : <small>Revisado</small>}</td></tr>)}
             </tbody></table></div>
           </section>
 

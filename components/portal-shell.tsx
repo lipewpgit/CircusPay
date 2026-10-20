@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowUpRight,
   BadgeDollarSign,
@@ -19,7 +20,7 @@ import {
   Users,
   WalletCards,
 } from "lucide-react";
-import { signOut } from "@/app/actions/auth";
+import { signOut, signOutAdmin } from "@/app/actions/auth";
 import { Brand } from "@/components/brand";
 
 const sellerWorkspace = [
@@ -69,7 +70,7 @@ export function PortalShell({ children, name, email, status, admin = false }: { 
           <div className="sidebar-footer">
             <span className="profile-dot">{name.slice(0, 2).toUpperCase()}</span>
             <div><strong>{name}</strong><small>{email}</small></div>
-            <form action={signOut}><button title="Sair"><LogOut size={18} /></button></form>
+            <form action={signOutAdmin}><button title="Sair"><LogOut size={18} /></button></form>
           </div>
         </aside>
         <div className="portal-main">
@@ -87,7 +88,7 @@ export function PortalShell({ children, name, email, status, admin = false }: { 
     <div className="seller-legacy app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/dashboard" aria-label="CircusPay início">
-          <img className="brand-mark" src="/circuspay-mark-transparent.png" alt="" />
+          <Image className="brand-mark" src="/circuspay-mark-transparent.png" width={45} height={45} alt="" />
           <span>Circus<span className="brand-pay">Pay</span></span>
         </Link>
 
