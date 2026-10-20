@@ -49,6 +49,9 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     <main className="onboarding-page">
       <div className="onboarding-ambient onboarding-ambient-one" />
       <div className="onboarding-ambient onboarding-ambient-two" />
+      <div className="onboarding-clown onboarding-clown-main" aria-hidden="true" />
+      <div className="onboarding-clown onboarding-clown-left" aria-hidden="true" />
+      <div className="onboarding-clown onboarding-clown-bottom" aria-hidden="true" />
 
       <header className="onboarding-header">
         <Brand compact />
