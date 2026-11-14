@@ -4,7 +4,12 @@ self.addEventListener('push',event=>{
   let data={title:'CircusPay — teste',body:'Nova notificação de teste.',url:'/'};
   try {if(event.data) data={...data,...event.data.json()};} catch {}
   event.waitUntil(Promise.all([
-    self.registration.showNotification(data.title,{body:data.body,icon:'/circuspay-original-notification-v5.png',tag:data.tag || 'circus-test',data:{url:'/'}}),
+    self.registration.showNotification(data.title,{
+      body:data.body,
+      icon:'/circuspay-original-v5-192.png?v=6',
+      tag:data.tag || 'circus-sale',
+      data:{url:data.url || '/dashboard'}
+    }),
     self.clients.matchAll({type:'window',includeUncontrolled:true}).then(clients=>Promise.all(clients.map(client=>client.postMessage({type:'refresh'}))))
   ]));
 });
@@ -13,6 +18,6 @@ self.addEventListener('notificationclick',event=>{
   event.waitUntil((async()=>{
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     for(const client of windows){if(new URL(client.url).origin===self.location.origin){await client.focus();client.postMessage({type:'refresh'});return;}}
-    await self.clients.openWindow('/');
+    await self.clients.openWindow(event.notification.data?.url || '/dashboard');
   })());
 });

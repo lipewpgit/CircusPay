@@ -44,6 +44,12 @@ page = replaceOnce(
   `<div className="award-visual" style={{position:'relative'}}><img src={award.image} alt={'Placa da premiação '+award.label} style={{filter:awardUnlocked?'none':'brightness(.78) saturate(.75)',transition:'filter .35s ease'}}/>{!awardUnlocked&&<div aria-label="Premiação bloqueada" style={{position:'absolute',inset:0,display:'grid',placeItems:'center',pointerEvents:'none'}}><span style={{width:52,height:52,borderRadius:'50%',display:'grid',placeItems:'center',background:'rgba(8,8,10,.88)',border:'1px solid rgba(214,168,75,.46)',boxShadow:'0 10px 30px rgba(0,0,0,.42)',color:'#d6a84b',backdropFilter:'blur(10px)'}}><LockKeyhole size={21}/></span></div>}</div><div className="award-progress"><span style={{width:awardProgress+'%'}}/></div><div className="award-meta"><span>{awardUnlocked?'DESBLOQUEADA':'SAQUES PAGOS'}</span><strong>{brl(withdrawnTotal)} / {award.label}</strong></div>`,
   "award card",
 );
+page = replaceOnce(
+  page,
+  'src="/icon-192.png"',
+  'src="/circuspay-original-v5-192.png"',
+  "install modal logo",
+);
 
 fs.writeFileSync(path.join(root, "app/dashboard/page.tsx"), page);
 fs.writeFileSync(path.join(root, "app/dashboard/legacy.css"), css);
