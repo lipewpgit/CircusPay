@@ -71,7 +71,7 @@ export default function Page() {
     setSupported('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
     if('Notification' in window)setPermission(Notification.permission);
     refresh();api('config').then(c=>{if(active)setConfig(c.publicKey);}).catch(()=>{});
-    if('serviceWorker' in navigator)navigator.serviceWorker.register('/syncpay-push-v11.js',{scope:'/',updateViaCache:'none'}).then(async registration=>{
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('/syncpay-push-v12.js',{scope:'/',updateViaCache:'none'}).then(async registration=>{
       await registration.update();
       const sub=await registration.pushManager?.getSubscription();if(active && sub){setEndpoint(sub.endpoint);}
     }).catch(()=>{if(active)setNotice({text:'Não foi possível preparar as notificações. Recarregue o aplicativo.',error:true});});
