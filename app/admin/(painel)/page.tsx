@@ -104,7 +104,7 @@ export default async function AdminPage({
       <div className="page-heading">
         <div>
           <span className="eyebrow">CENTRAL DO ADMINISTRADOR</span>
-          <h1>Tudo da CircusPay em uma tela.</h1>
+          <h1>Tudo da Sync Pay em uma tela.</h1>
           <p>Aprove sellers, acompanhe vendas, saldos, saques e toda a movimentação da plataforma.</p>
         </div>
       </div>
@@ -185,7 +185,7 @@ export default async function AdminPage({
                 </div>
                 <div className="withdraw-values">
                   <span>Solicitado<strong>{brl(Number(item.requested_cents))}</strong></span>
-                  <span>Taxa CircusPay<strong>- {brl(Number(item.fee_cents))}</strong></span>
+                  <span>Taxa Sync Pay<strong>- {brl(Number(item.fee_cents))}</strong></span>
                   <span>Enviar ao seller<strong>{brl(Number(item.net_cents))}</strong></span>
                 </div>
                 <form action={updateWithdrawal} className="review-form">

@@ -12,7 +12,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   ]);
   const approved = seller?.status === "approved";
   return <>
-    <div className="page-heading"><div><span className="eyebrow">CATÁLOGO</span><h1>Produtos e checkout.</h1><p>Crie seus produtos e compartilhe o link de pagamento da CircusPay.</p></div></div>
+    <div className="page-heading"><div><span className="eyebrow">CATÁLOGO</span><h1>Produtos e checkout.</h1><p>Crie seus produtos e compartilhe o link de pagamento da Sync Pay.</p></div></div>
     {query.erro && <div className="banner error">{query.erro}</div>}{query.sucesso && <div className="banner success">{query.sucesso}</div>}
     <div className="two-column">
       <section className={`content-card form-card ${!approved ? "locked-card" : ""}`}>

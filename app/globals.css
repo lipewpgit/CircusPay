@@ -102,7 +102,7 @@
 .onboarding-ambient{position:absolute;border-radius:50%;pointer-events:none;filter:blur(3px)}
 .onboarding-ambient-one{width:520px;height:520px;right:-330px;top:210px;border:1px solid rgba(215,25,45,.11);box-shadow:0 0 0 90px rgba(215,25,45,.025),0 0 0 180px rgba(215,25,45,.012);animation:onboard-breathe 8s ease-in-out infinite}
 .onboarding-ambient-two{width:260px;height:260px;left:-185px;top:62%;border:1px solid rgba(216,168,79,.1);box-shadow:0 0 80px rgba(216,168,79,.035)}
-.onboarding-clown{position:absolute;z-index:1;pointer-events:none;background:url('/circuspay-mark-transparent.png') center/contain no-repeat;will-change:transform,opacity}
+.onboarding-clown{position:absolute;z-index:1;pointer-events:none;background:url('/syncpay-logo.png') center/contain no-repeat;will-change:transform,opacity}
 .onboarding-clown:after{content:"";position:absolute;inset:16%;border:1px solid rgba(215,25,45,.13);border-radius:50%;transform:scale(1.1);filter:blur(1px);box-shadow:0 0 60px rgba(215,25,45,.08)}
 .onboarding-clown-main{width:430px;height:430px;right:-34px;top:105px;opacity:.14;filter:saturate(.9) contrast(1.05) drop-shadow(0 0 38px rgba(215,25,45,.14));animation:onboard-clown-float 9s ease-in-out infinite}
 .onboarding-clown-left{width:210px;height:210px;left:-76px;top:510px;opacity:.045;filter:grayscale(.35) drop-shadow(0 0 28px rgba(216,168,79,.13));transform:rotate(-14deg);animation:onboard-clown-drift 12s ease-in-out infinite}

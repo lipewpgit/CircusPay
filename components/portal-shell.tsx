@@ -87,9 +87,9 @@ export function PortalShell({ children, name, email, status, admin = false }: { 
   return (
     <div className="seller-legacy app-shell">
       <aside className="sidebar">
-        <Link className="brand" href="/dashboard" aria-label="CircusPay início">
-          <Image className="brand-mark" src="/circuspay-mark-transparent.png" width={45} height={45} alt="" />
-          <span>Circus<span className="brand-pay">Pay</span></span>
+        <Link className="brand" href="/dashboard" aria-label="Sync Pay início">
+          <Image className="brand-mark" src="/syncpay-logo.png" width={45} height={45} alt="" />
+          <span>Sync <span className="brand-pay">Pay</span></span>
         </Link>
 
         <div className="workspace">
@@ -119,7 +119,7 @@ export function PortalShell({ children, name, email, status, admin = false }: { 
           <div className="sidebar-install">
             <Smartphone size={22} />
             <strong>Sua operação no bolso.</strong>
-            <p>Instale a CircusPay e acompanhe suas vendas no celular.</p>
+            <p>Instale a Sync Pay e acompanhe suas vendas no celular.</p>
             <Link href="/dashboard#notificacoes">Configurar notificações <ArrowUpRight size={16} /></Link>
           </div>
           <div className="profile">

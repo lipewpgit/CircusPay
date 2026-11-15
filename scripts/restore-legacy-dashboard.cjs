@@ -47,10 +47,19 @@ page = replaceOnce(
 page = replaceOnce(
   page,
   'src="/icon-192.png"',
-  'src="/circuspay-original-v5-192.png"',
+  'src="/syncpay-logo-192.png"',
   "install modal logo",
 );
+page = page
+  .replaceAll('/circuspay-mark-transparent.png', '/syncpay-logo.png')
+  .replaceAll('/circuspay-original-v5-192.png', '/syncpay-logo-192.png')
+  .replaceAll('Circus<span className="brand-pay">Pay</span>', 'Sync <span className="brand-pay">Pay</span>')
+  .replaceAll('CIRCUS PAY', 'SYNC PAY')
+  .replaceAll('Circus Pay', 'Sync Pay')
+  .replaceAll('CircusPay', 'Sync Pay')
+  .replaceAll('>CP</span>', '>SP</span>')
+  .replaceAll('Ex.: Curso Circus', 'Ex.: Curso Sync');
 
 fs.writeFileSync(path.join(root, "app/dashboard/page.tsx"), page);
 fs.writeFileSync(path.join(root, "app/dashboard/legacy.css"), css);
-console.log("CircusPay ChatGPT Sites v25 restored with production patches.");
+console.log("Sync Pay dashboard restored with production patches.");

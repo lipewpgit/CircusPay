@@ -10,8 +10,8 @@ export default async function AdminLoginPage({ searchParams }: { searchParams: P
     <AuthShell
       variant="admin"
       title="Painel administrativo"
-      description="Acesso exclusivo à administração da CircusPay."
-      footer={<>Acesso protegido da CircusPay</>}
+      description="Acesso exclusivo à administração da Sync Pay."
+      footer={<>Acesso protegido da Sync Pay</>}
     >
       <div className="trust-line"><ShieldCheck size={18} /> Área restrita ao administrador</div>
       {query.erro && <div className="form-alert error">{query.erro}</div>}

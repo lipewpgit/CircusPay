@@ -31,7 +31,7 @@ export function AuthShell({
         </div>
         <div className="auth-pitch">
           <div className="auth-copy">
-            <span className="eyebrow">SUA OPERAÇÃO CIRCUSPAY</span>
+            <span className="eyebrow">SUA OPERAÇÃO SYNC PAY</span>
             <h1>Venda. Acompanhe.<br/><em>Cresça.</em></h1>
             <p>Uma experiência feita para quem quer vender com controle, agilidade e visão de negócio.</p>
           </div>
@@ -40,13 +40,13 @@ export function AuthShell({
             <span className="stage-orbit orbit-one" />
             <span className="stage-orbit orbit-two" />
             <span className="stage-scan" />
-            <div className="stage-core"><span /><Image src="/circuspay-mark-transparent.png" width={112} height={112} alt="" /></div>
+            <div className="stage-core"><span /><Image src="/syncpay-logo.png" width={112} height={112} alt="" /></div>
             <div className="stage-chip stage-chip-one"><Activity size={14}/><span>Vendas em tempo real</span></div>
             <div className="stage-chip stage-chip-two"><WalletCards size={14}/><span>Gestão financeira</span></div>
             <div className="stage-chip stage-chip-three"><BellRing size={14}/><span>Notificação instantânea</span></div>
           </div>
         </div>
-        <div className="auth-visual-footer"><Link href="/" className="back-home">CircusPay © 2026</Link><span><ShieldCheck size={13}/> Ambiente protegido</span></div>
+        <div className="auth-visual-footer"><Link href="/" className="back-home">Sync Pay © 2026</Link><span><ShieldCheck size={13}/> Ambiente protegido</span></div>
       </section>}
       <section className="auth-panel">
         <div className="auth-card">

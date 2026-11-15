@@ -3,10 +3,10 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "CircusPay", template: "%s | CircusPay" },
+  title: { default: "Sync Pay", template: "%s | Sync Pay" },
   description: "Gestão de pagamentos, produtos e saques.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/circuspay-original-v5-192.png", apple: "/circuspay-original-touch-v5.png" },
+  icons: { icon: "/syncpay-logo-192.png", apple: "/syncpay-logo-touch.png" },
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#080808" };

@@ -64,7 +64,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     supabase.from("audit_logs").select("id,action,entity_type,entity_id,created_at").order("created_at", { ascending: false }).limit(12),
   ]);
 
-  const profiles = profilesResult.data ?? [];
+  const profiles = (profilesResult.data ?? []).map((profile) => profile.full_name === "Administrador CircusPay"
+    ? { ...profile, full_name: "Administrador Sync Pay" }
+    : profile);
   const sellers = sellersResult.data ?? [];
   const withdrawals = withdrawalsResult.data ?? [];
   const payments = paymentsResult.data ?? [];
@@ -99,7 +101,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
       <section className="admin-console-main">
         <header className="admin-console-topbar">
-          <div><span>ADMINISTRAÇÃO</span><strong>CircusPay Control</strong></div>
+          <div><span>ADMINISTRAÇÃO</span><strong>Sync Pay Control</strong></div>
           <Link href="/login" target="_blank" rel="noreferrer">Abrir login seller</Link>
         </header>
 

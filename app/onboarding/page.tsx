@@ -75,7 +75,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         <nav className="onboarding-progress" aria-label="Etapas de ativação">
           <div className={locked ? "complete" : "active"}><span>{locked ? <Check size={16} /> : "01"}</span><div><small>ETAPA 1</small><strong>Identificação</strong></div></div>
           <i />
-          <div className={locked ? (isApproved ? "complete" : "active") : ""}><span>{isApproved ? <Check size={16} /> : "02"}</span><div><small>ETAPA 2</small><strong>Análise CircusPay</strong></div></div>
+          <div className={locked ? (isApproved ? "complete" : "active") : ""}><span>{isApproved ? <Check size={16} /> : "02"}</span><div><small>ETAPA 2</small><strong>Análise Sync Pay</strong></div></div>
           <i />
           <div className={isApproved ? "active" : ""}><span>03</span><div><small>ETAPA 3</small><strong>Operação liberada</strong></div></div>
         </nav>
@@ -94,12 +94,12 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
             <div className="review-copy">
               <span className="review-pill">{isApproved ? <CircleCheck size={13} /> : <Clock3 size={13} />}{isApproved ? "VERIFICAÇÃO CONCLUÍDA" : "ANÁLISE EM ANDAMENTO"}</span>
               <h2>{isApproved ? "Sua operação está liberada." : "Seus dados entraram em análise."}</h2>
-              <p>{isApproved ? "Tudo certo. Você já pode criar produtos, gerar checkouts e começar a vender com a CircusPay." : "Nossa equipe está verificando os documentos e a conta de recebimento. Você verá a atualização aqui assim que concluirmos."}</p>
+              <p>{isApproved ? "Tudo certo. Você já pode criar produtos, gerar checkouts e começar a vender com a Sync Pay." : "Nossa equipe está verificando os documentos e a conta de recebimento. Você verá a atualização aqui assim que concluirmos."}</p>
 
               <div className="review-timeline">
                 <div className="done"><span><Check size={14} /></span><div><strong>Dados enviados</strong><small>Cadastro recebido com segurança</small></div></div>
                 <i />
-                <div className={isApproved ? "done" : "current"}><span>{isApproved ? <Check size={14} /> : <Clock3 size={14} />}</span><div><strong>Análise CircusPay</strong><small>{isApproved ? "Identidade validada" : "Verificação em andamento"}</small></div></div>
+                <div className={isApproved ? "done" : "current"}><span>{isApproved ? <Check size={14} /> : <Clock3 size={14} />}</span><div><strong>Análise Sync Pay</strong><small>{isApproved ? "Identidade validada" : "Verificação em andamento"}</small></div></div>
                 <i />
                 <div className={isApproved ? "current" : "waiting"}><span>{isApproved ? <Check size={14} /> : <LockKeyhole size={14} />}</span><div><strong>Operação liberada</strong><small>{isApproved ? "Pronta para receber vendas" : "Disponível após aprovação"}</small></div></div>
               </div>

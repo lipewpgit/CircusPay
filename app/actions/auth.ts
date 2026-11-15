@@ -74,7 +74,7 @@ export async function signIn(formData: FormData) {
   }
   if (seller?.status === "suspended") {
     await supabase.auth.signOut();
-    redirect(withMessage("/login", "erro", "Esta conta está suspensa. Fale com o suporte da CircusPay."));
+    redirect(withMessage("/login", "erro", "Esta conta está suspensa. Fale com o suporte da Sync Pay."));
   }
   redirect(seller?.status === "approved" ? "/dashboard" : "/onboarding");
 }
@@ -148,7 +148,7 @@ export async function activateAdmin(formData: FormData) {
     password: parsed.data.password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=/admin`,
-      data: { full_name: "Administrador CircusPay", account_type: "cpf" },
+      data: { full_name: "Administrador Sync Pay", account_type: "cpf" },
     },
   });
 

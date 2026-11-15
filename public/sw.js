@@ -1,12 +1,12 @@
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
-  let data={title:'CircusPay — teste',body:'Nova notificação de teste.',url:'/'};
+  let data={title:'Sync Pay — teste',body:'Nova notificação de teste.',url:'/'};
   try {if(event.data) data={...data,...event.data.json()};} catch {}
   event.waitUntil(Promise.all([
     self.registration.showNotification(data.title,{
       body:data.body,
-      icon:'/circuspay-original-v5-192.png?v=6',
+      icon:'/syncpay-logo-192.png?v=7',
       tag:data.tag || 'circus-sale',
       data:{url:data.url || '/dashboard'}
     }),

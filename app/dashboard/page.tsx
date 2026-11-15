@@ -1,185 +1,162 @@
-import Link from "next/link";
-import {
-  ArrowUpRight,
-  Barcode,
-  Clock3,
-  CreditCard,
-  Landmark,
-  Package,
-  QrCode,
-  RotateCcw,
-  ShieldAlert,
-  ShoppingBag,
-  Sparkles,
-  WalletCards,
-} from "lucide-react";
-import { requireUser } from "@/lib/auth";
-import { brl } from "@/lib/money";
-
-const awardTargets = [
-  { label: "10 mil", value: 1_000_000, short: "10K", image: "/award-10k.webp" },
-  { label: "100 mil", value: 10_000_000, short: "100K", image: "/award-100k.webp" },
-  { label: "500 mil", value: 50_000_000, short: "500K", image: "/award-500k.webp" },
-  { label: "1 milhão", value: 100_000_000, short: "1M", image: "/award-1m.webp" },
-];
-
-const methodMeta = {
-  pix: { label: "Pix", Icon: QrCode },
-  card: { label: "Cartão", Icon: CreditCard },
-  boleto: { label: "Boleto", Icon: Barcode },
-};
-
-function saoPauloDateKey(value: string | Date) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(value));
+'use client';
+import {useCallback,useEffect,useState} from 'react';
+import {LayoutDashboard,ArrowUpRight,Bell,Check,ChevronRight,ChevronLeft,Smartphone,Plus,Send,History,ArrowDownLeft,Menu,X,ShieldCheck,Monitor,Info,LoaderCircle,LogOut,Download,TriangleAlert,ShoppingBag,Package,RotateCcw,Users,Landmark,WalletCards,Trophy,Plug,CalendarDays,CreditCard,Barcode,DollarSign,Upload,FileText,Copy,ExternalLink,LockKeyhole} from 'lucide-react';
+import {brl,parseCents} from '@/lib/money';
+type Event = {id:string;cents:number;kind:string;status:string;accepted:number;failed:number;payment_method:string;refunded:number;held:number;created_at:string};
+type Device = {endpoint:string;label:string;created_at:string};
+type Product = {id:string;name:string;cents:number;status:string;created_at:string};
+type FinanceDocument = {id:string;file_name:string;mime_type:string;size:number;created_at:string};
+type Dashboard = {events:Event[];devices:Device[];stats:{tests:number;total:number;pendingTotal:number;approved:number;pending:number;refunded:number;refundedTotal:number;heldTotal:number;pix:number;card:number;boleto:number;notifications:number}};
+const empty:Dashboard={events:[],devices:[],stats:{tests:0,total:0,pendingTotal:0,approved:0,pending:0,refunded:0,refundedTotal:0,heldTotal:0,pix:0,card:0,boleto:0,notifications:0}};
+const awards=[
+  {label:'R$ 10 mil',cents:1_000_000,image:'/award-10k.webp'},
+  {label:'R$ 100 mil',cents:10_000_000,image:'/award-100k.webp'},
+  {label:'R$ 500 mil',cents:50_000_000,image:'/award-500k.webp'},
+  {label:'R$ 1 milhão',cents:100_000_000,image:'/award-1m.webp'},
+] as const;
+const navItems=[
+  {id:'dashboard',label:'Dashboard',icon:LayoutDashboard},
+  {id:'transactions',label:'Vendas',icon:ShoppingBag},
+  {id:'products',label:'Produtos',icon:Package},
+  {id:'refunds',label:'Reembolsos',icon:RotateCcw},
+  {id:'customers',label:'Clientes',icon:Users},
+  {id:'acquirers',label:'Adquirentes',icon:Landmark},
+  {id:'finance',label:'Financeiro',icon:WalletCards},
+  {id:'top-sellers',label:'Top Sellers',icon:Trophy},
+  {id:'integrations',label:'Integrações',icon:Plug}
+] as const;
+const sectionMeta={
+  dashboard:{label:'Dashboard',title:'Visão geral da operação.',description:'Acompanhe vendas, volume e desempenho em um só painel.',icon:LayoutDashboard},
+  transactions:{label:'Vendas',title:'Vendas.',description:'Todas as transações da sua operação organizadas em um só lugar.',icon:ShoppingBag},
+  products:{label:'Produtos',title:'Produtos.',description:'Organize os produtos conectados à sua operação.',icon:Package},
+  refunds:{label:'Reembolsos',title:'Reembolsos.',description:'Acompanhe solicitações e valores reembolsados.',icon:RotateCcw},
+  customers:{label:'Clientes',title:'Clientes.',description:'Visualize e organize os compradores da sua operação.',icon:Users},
+  acquirers:{label:'Adquirentes',title:'Adquirentes.',description:'Gerencie as conexões de processamento de pagamentos.',icon:Landmark},
+  finance:{label:'Financeiro',title:'Financeiro.',description:'Acompanhe saldos, repasses e movimentações.',icon:WalletCards},
+  'top-sellers':{label:'Top Sellers',title:'Top Sellers.',description:'Veja os produtos e vendas com melhor desempenho.',icon:Trophy},
+  integrations:{label:'Integrações',title:'Integrações.',description:'Conecte as ferramentas usadas pela Sync Pay.',icon:Plug},
+  notifications:{label:'Notificações',title:'Ativar notificações.',description:'Conecte seu celular para receber os alertas das vendas criadas.',icon:Bell}
+} as const;
+async function api<T = any>(path:string,body?:unknown,method='POST'): Promise<T> {
+  const res=await fetch('/api/'+path,{cache:'no-store',...(body!==undefined?{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
+  let data:any;try{data=await res.json();}catch{throw new Error('Sua sessão pode ter expirado. Abra o aplicativo novamente e entre na conta.');}
+  if(!res.ok) throw new Error(data.error || data.message || 'Não foi possível concluir. Tente novamente.');
+  return data;
 }
-
-function saoPauloHour(value: string) {
-  const hour = Number(new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false,
-  }).format(new Date(value)).replace(/\D/g, ""));
-  return hour === 24 ? 0 : hour;
-}
-
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const query = await searchParams;
-  const { supabase, user } = await requireUser();
-  const [{ data: seller }, { data: balance }, { data: payments }, { count: productCount }] = await Promise.all([
-    supabase.from("seller_accounts").select("status,review_notes").eq("user_id", user.id).single(),
-    supabase.from("seller_balances").select("available_cents,held_cents").eq("seller_id", user.id).maybeSingle(),
-    supabase.from("payments").select("id,gross_cents,status,method,created_at").order("created_at", { ascending: false }).limit(1000),
-    supabase.from("products").select("id", { count: "exact", head: true }),
-  ]);
-
-  const allPayments = payments ?? [];
-  const approved = seller?.status === "approved";
-  const approvedPayments = allPayments.filter((payment) => payment.status === "approved");
-  const pendingPayments = allPayments.filter((payment) => payment.status === "pending");
-  const refundedPayments = allPayments.filter((payment) => ["refunded", "charged_back"].includes(payment.status));
-  const gross = approvedPayments.reduce((sum, payment) => sum + Number(payment.gross_cents), 0);
-  const pendingGross = pendingPayments.reduce((sum, payment) => sum + Number(payment.gross_cents), 0);
-  const averageTicket = approvedPayments.length ? Math.round(gross / approvedPayments.length) : 0;
-  const refundRate = approvedPayments.length + refundedPayments.length
-    ? Math.round((refundedPayments.length / (approvedPayments.length + refundedPayments.length)) * 1000) / 10 : 0;
-  const conversion = allPayments.length ? Math.round((approvedPayments.length / allPayments.length) * 1000) / 10 : 0;
-
-  const todayKey = saoPauloDateKey(new Date());
-  const todayApproved = approvedPayments.filter((payment) => saoPauloDateKey(payment.created_at) === todayKey);
-  const todayGross = todayApproved.reduce((sum, payment) => sum + Number(payment.gross_cents), 0);
-  const chartHours = [0, 4, 8, 12, 16, 20];
-  const chart = chartHours.map((start) => ({
-    label: `${String(start).padStart(2, "0")}:00`,
-    value: todayApproved.filter((payment) => {
-      const hour = saoPauloHour(payment.created_at);
-      return hour >= start && hour < start + 4;
-    }).reduce((sum, payment) => sum + Number(payment.gross_cents), 0),
-  }));
-  const chartMax = Math.max(...chart.map((item) => item.value), 1);
-  const graphPoints = chart.map((item, index) => {
-    const x = 5 + index * 19;
-    const y = 78 - (item.value / chartMax) * 58;
-    return `${x},${y}`;
-  }).join(" ");
-
-  const methods = (Object.keys(methodMeta) as Array<keyof typeof methodMeta>).map((key) => {
-    const count = approvedPayments.filter((payment) => payment.method === key).length;
-    return { key, count, share: approvedPayments.length ? (count / approvedPayments.length) * 100 : 0, ...methodMeta[key] };
-  });
-  const nextAwardIndex = Math.max(0, awardTargets.findIndex((award) => gross < award.value));
-  const nextAward = awardTargets[nextAwardIndex] ?? awardTargets[awardTargets.length - 1];
-  const awardProgress = Math.min(100, (gross / nextAward.value) * 100);
-
-  const stats = [
-    { label: "Faturamento bruto", value: brl(gross), helper: "Volume aprovado", Icon: ShoppingBag },
-    { label: "Vendas aprovadas", value: String(approvedPayments.length), helper: `${todayApproved.length} hoje`, Icon: Sparkles },
-    { label: "Ticket médio", value: brl(averageTicket), helper: "Por venda aprovada", Icon: CreditCard },
-    { label: "Saldo pendente", value: brl(pendingGross), helper: `${pendingPayments.length} pagamentos`, Icon: Clock3 },
-    { label: "Saldo retido", value: brl(Number(balance?.held_cents ?? 0)), helper: "Em processamento", Icon: WalletCards },
-    { label: "Taxa de reembolso", value: `${refundRate.toLocaleString("pt-BR")}%`, helper: `${refundedPayments.length} ocorrências`, Icon: RotateCcw },
-  ];
-
-  return (
-    <>
-      {query.sucesso && <div className="notice">{query.sucesso}</div>}
-      {query.erro && <div className="notice error">Você não tem acesso a essa área.</div>}
-
-      <div className="page-title">
-        <div><span className="eyebrow">VISÃO GERAL</span><h1>Dashboard</h1><p>Acompanhe os números da sua operação em tempo real.</p></div>
-        <Link className="secondary" href="/dashboard/produtos"><Package size={16} /> Criar produto</Link>
-      </div>
-
-      {!approved && (
-        <div className="notice error">
-          <ShieldAlert size={18} />
-          <span><strong>{seller?.status === "pending" ? "Sua documentação está em análise." : "Conclua seu cadastro para começar a vender."}</strong> {seller?.review_notes || "Os checkouts são liberados após a aprovação."}</span>
-          <Link href="/onboarding">Ver cadastro →</Link>
+export default function Page() {
+  const [tab,setTab]=useState('dashboard'),[menu,setMenu]=useState(false),[amount,setAmount]=useState('107,22'),[kind,setKind]=useState('approved'),[paymentMethod,setPaymentMethod]=useState('pix');
+  const [dashboard,setDashboard]=useState<Dashboard>(empty),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[activating,setActivating]=useState(false);
+  const [notice,setNotice]=useState<{text:string;error:boolean}|null>(null),[permission,setPermission]=useState('default'),[registered,setRegistered]=useState(false),[supported,setSupported]=useState(false),[ios,setIos]=useState(false),[standalone,setStandalone]=useState(false),[install,setInstall]=useState(false),[filter,setFilter]=useState('all');
+  const [config,setConfig]=useState<string|null>(null),[endpoint,setEndpoint]=useState<string|null>(null);
+  const [products,setProducts]=useState<Product[]>([]),[productName,setProductName]=useState(''),[productPrice,setProductPrice]=useState(''),[productBusy,setProductBusy]=useState(false);
+  const [financeHolder,setFinanceHolder]=useState(''),[financeKeyType,setFinanceKeyType]=useState('cpf'),[financeKey,setFinanceKey]=useState(''),[financeStatus,setFinanceStatus]=useState(''),[financeDocs,setFinanceDocs]=useState<FinanceDocument[]>([]),[financeBusy,setFinanceBusy]=useState(false);
+  const [refunding,setRefunding]=useState<string|null>(null),[awardIndex,setAwardIndex]=useState(0),[withdrawnTotal,setWithdrawnTotal]=useState(0);
+  const cents=parseCents(amount);
+  const approvalRate=dashboard.stats.tests?Math.round((dashboard.stats.approved/dashboard.stats.tests)*100):0;
+  const averageTicket=dashboard.stats.approved?Math.round(dashboard.stats.total/dashboard.stats.approved):0;
+  const refundRate=dashboard.stats.tests?Math.round((dashboard.stats.refunded/dashboard.stats.tests)*100):0;
+  const availableBalance=Math.max(0,dashboard.stats.total-dashboard.stats.heldTotal);
+  const paymentTotal=dashboard.stats.pix+dashboard.stats.card+dashboard.stats.boleto;
+  const paymentShare=(value:number)=>paymentTotal?((value/paymentTotal)*100).toFixed(1).replace('.',','):'0,0';
+  const award=awards[awardIndex],awardUnlocked=withdrawnTotal>=award.cents,awardProgress=Math.min(100,Math.round((withdrawnTotal/award.cents)*100));
+  const current=sectionMeta[tab as keyof typeof sectionMeta] || sectionMeta.dashboard;
+  const CurrentIcon=current.icon;
+  const refresh=useCallback(async()=>{try{const [nextDashboard,awardData]=await Promise.all([api<Dashboard>('dashboard'),api<{withdrawnTotal:number}>('awards',undefined,'GET')]);setDashboard(nextDashboard);setWithdrawnTotal(awardData.withdrawnTotal||0);}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setLoading(false);}},[]);
+  const refreshProducts=useCallback(async()=>{try{const data=await api<{products:Product[]}>('products',undefined,'GET');setProducts(data.products);}catch(e){setNotice({text:(e as Error).message,error:true});}},[]);
+  const refreshFinance=useCallback(async()=>{try{const data=await api<any>('finance',undefined,'GET');setFinanceDocs(data.documents||[]);if(data.profile){setFinanceHolder(data.profile.holder_name);setFinanceKeyType(data.profile.pix_key_type);setFinanceKey(data.profile.pix_key);setFinanceStatus(data.profile.status);}}catch(e){setNotice({text:(e as Error).message,error:true});}},[]);
+  useEffect(()=>{
+    let active=true;
+    setIos(/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1));
+    setStandalone(window.matchMedia('(display-mode: standalone)').matches || !!(navigator as any).standalone);
+    setSupported('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+    if('Notification' in window)setPermission(Notification.permission);
+    refresh();api('config').then(c=>{if(active)setConfig(c.publicKey);}).catch(()=>{});
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js?v=5',{scope:'/',updateViaCache:'none'}).then(async registration=>{
+      await registration.update();
+      const sub=await registration.pushManager?.getSubscription();if(active && sub){setEndpoint(sub.endpoint);}
+    }).catch(()=>{if(active)setNotice({text:'Não foi possível preparar as notificações. Recarregue o aplicativo.',error:true});});
+    const handler=()=>refresh();window.addEventListener('focus',handler);navigator.serviceWorker?.addEventListener('message',handler);
+    return()=>{active=false;window.removeEventListener('focus',handler);navigator.serviceWorker?.removeEventListener('message',handler);};
+  },[refresh]);
+  useEffect(()=>{if(tab==='products')refreshProducts();if(tab==='finance')refreshFinance();},[tab,refreshProducts,refreshFinance]);
+  useEffect(()=>{setRegistered(!!endpoint && dashboard.devices.some(d=>d.endpoint===endpoint) && permission==='granted');},[endpoint,dashboard.devices,permission]);
+  async function activate(){
+    if(ios && !standalone){setInstall(true);return;}
+    if(!supported){setNotice({text:'Este navegador não permite notificações. No iPhone, instale pelo Safari; no computador, use um navegador com suporte a notificações.',error:true});return;}
+    if(!config){setNotice({text:'Não foi possível carregar a configuração. Recarregue o aplicativo.',error:true});return;}
+    setActivating(true);setNotice(null);
+    try {
+      // Permission is requested directly in the button gesture, before other awaits.
+      const p=await Notification.requestPermission();setPermission(p);
+      if(p!=='granted')throw new Error(p==='denied'?'Permissão bloqueada. Ative as notificações da Sync Pay nos Ajustes do dispositivo.':'Permita as notificações para ativar este dispositivo.');
+      const reg=await navigator.serviceWorker.ready;
+      let sub=await reg.pushManager.getSubscription();
+      if(!sub){const b64=config.replace(/-/g,'+').replace(/_/g,'/');const key=Uint8Array.from(atob(b64+'='.repeat((4-b64.length%4)%4)),c=>c.charCodeAt(0));sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});}
+      const label=ios?'iPhone / iPad':/Android/.test(navigator.userAgent)?'Android':'Computador';
+      await api('subscribe',{subscription:sub.toJSON(),label});setEndpoint(sub.endpoint);await refresh();setNotice({text:'Dispositivo ativado. As notificações estão prontas.',error:false});
+    }catch(e){setNotice({text:(e as Error).message,error:true});}finally{setActivating(false);}
+  }
+  async function deactivate(){
+    if(!endpoint)return;setActivating(true);
+    try{await api('subscribe',{endpoint},'DELETE');const reg=await navigator.serviceWorker.ready;await(await reg.pushManager.getSubscription())?.unsubscribe();setEndpoint(null);await refresh();setNotice({text:'Notificações desativadas neste dispositivo.',error:false});}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setActivating(false);}
+  }
+  async function send(){
+    if(!cents){setNotice({text:'Digite um valor entre R$ 0,01 e R$ 1.000.000,00, com até dois centavos.',error:true});return;}
+    if(!dashboard.devices.length){setTab('notifications');setNotice({text:'Ative as notificações no celular para receber os avisos de venda.',error:true});return;}
+    setBusy(true);setNotice(null);
+    try{const r=await api('send',{cents,kind,paymentMethod,id:crypto.randomUUID()});setNotice({text:r.accepted+' '+(r.accepted===1?'notificação enviada':'notificações enviadas')+' para o serviço de push.'+(r.failed?' '+r.failed+' dispositivo(s) com falha.':''),error:!!r.failed});await refresh();}catch(e){setNotice({text:(e as Error).message,error:true});await refresh();}finally{setBusy(false);}
+  }
+  async function createProduct(){const price=parseCents(productPrice);if(!price){setNotice({text:'Informe um preço válido para o produto.',error:true});return;}setProductBusy(true);try{await api('products',{name:productName,cents:price});setProductName('');setProductPrice('');await refreshProducts();setNotice({text:'Produto criado com sucesso.',error:false});}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setProductBusy(false);}}
+  async function copyCheckout(product:Product){const link=window.location.origin+'/checkout/'+product.id;try{await navigator.clipboard.writeText(link);setNotice({text:'Link do checkout copiado.',error:false});}catch{setNotice({text:'Não foi possível copiar. Abra o checkout e copie o endereço.',error:true});}}
+  async function refundEvent(id:string){setRefunding(id);try{await api('refund',{id});await refresh();setNotice({text:'Venda reembolsada. Os indicadores foram atualizados.',error:false});}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setRefunding(null);}}
+  async function saveFinance(){setFinanceBusy(true);try{const data=await api<any>('finance',{holderName:financeHolder,pixKeyType:financeKeyType,pixKey:financeKey});setFinanceStatus(data.profile.status);setNotice({text:'Dados financeiros salvos para análise.',error:false});}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setFinanceBusy(false);}}
+  async function uploadFinanceDocument(file:File){setFinanceBusy(true);try{const form=new FormData();form.append('document',file);const response=await fetch('/api/finance',{method:'POST',body:form});const data=await response.json() as {error?:string};if(!response.ok)throw new Error(data.error||'Falha no envio do documento.');await refreshFinance();setNotice({text:'Documento enviado com segurança.',error:false});}catch(e){setNotice({text:(e as Error).message,error:true});}finally{setFinanceBusy(false);}}
+  const shown=dashboard.events.filter(e=>filter==='all'||e.kind===filter);
+  const nav=(id:string)=>{setTab(id);setMenu(false);};
+  const stateLabel=(e:Event)=>e.refunded?'Reembolsada':e.status==='payment_confirmed'?'Pagamento aprovado':e.status==='payment_pending'?'Aguardando pagamento':e.status==='payment_failed'?'Pagamento não aprovado':e.status==='sent'?'Enviada':e.status==='partial'?'Envio parcial':e.status==='sending'?'Processando':'Falha no envio';
+  const paymentLabel=(method:string)=>method==='card'?'Cartão':method==='boleto'?'Boleto':'Pix';
+  const history=(limit?:number,source=shown,emptyTitle='Nenhuma venda registrada')=>{const items=limit?source.slice(0,limit):source;return <div className="table-wrap"><table><thead><tr><th>Venda</th><th>Data e hora</th><th>Valor</th><th>Meio</th><th>Status</th><th>Ação</th></tr></thead><tbody>{items.map(e=><tr key={e.id}><td><div className="transaction"><span className={'transaction-icon '+(e.kind==='pending'?'pending':'')}><ArrowDownLeft size={18}/></span><div><strong>{e.refunded?'Venda reembolsada':e.kind==='approved'?'Venda aprovada':'Venda pendente'}</strong><small>{e.status.startsWith('payment_')?'Checkout':'Venda'} · {e.id.slice(0,8).toUpperCase()}</small></div></div></td><td className="date">{new Date(e.created_at).toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo'})}<small>{new Date(e.created_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})}</small></td><td className="money-cell">{brl(e.cents)}</td><td><span className="payment-badge">{paymentLabel(e.payment_method)}</span></td><td><span className={'status '+(e.refunded||e.status==='failed'||e.status==='payment_failed'?'failed':e.status==='sent'||e.status==='payment_confirmed'?'sent':'waiting')}>{stateLabel(e)}</span></td><td>{e.kind==='approved'&&!e.refunded&&!e.status.startsWith('payment_')?<button className="refund-button" onClick={()=>refundEvent(e.id)} disabled={refunding===e.id}>{refunding===e.id?'Processando…':'Reembolsar'}</button>:<span className="no-action">—</span>}</td></tr>)}</tbody></table>{!items.length&&<div className="empty"><History size={27}/><strong>{loading?'Carregando…':emptyTitle}</strong><p>{loading?'Só um instante.':'Os registros aparecerão aqui.'}</p></div>}</div>};
+  return <div className="app-shell">
+    {menu&&<button className="scrim" aria-label="Fechar menu" onClick={()=>setMenu(false)}/>}
+    <aside className={'sidebar '+(menu?'open':'')}>
+      <a className="brand" href="/" aria-label="Sync Pay início"><img className="brand-mark" src="/syncpay-logo.png" alt=""/><span>Sync <span className="brand-pay">Pay</span></span></a>
+      <div className="workspace"><div className="workspace-avatar">C</div><div><strong>Minha operação</strong><small>Operação ativa</small></div><span className="workspace-dot"/></div>
+      <span className="nav-label">WORKSPACE</span>
+      <nav>{navItems.map(n=><button className={tab===n.id?'active':''} key={n.id} onClick={()=>nav(n.id)}><n.icon size={18}/>{n.label}{tab===n.id&&<span className="active-dot"/>}</button>)}</nav>
+      <span className="nav-label nav-label-secondary">SISTEMA</span>
+      <nav className="system-nav"><button className={tab==='notifications'?'active':''} onClick={()=>nav('notifications')}><Bell size={18}/>Notificações{tab==='notifications'&&<span className="active-dot"/>}</button></nav>
+      <div className="sidebar-bottom"><div className="sidebar-install"><Smartphone size={22}/><strong>Sua operação no bolso.</strong><p>Instale a Sync Pay e acompanhe suas vendas no celular.</p><button onClick={()=>setInstall(true)}>Instalar aplicativo <ArrowUpRight size={16}/></button></div><a href="/signout-with-chatgpt?return_to=/" target="_top" className="profile"><span className="profile-avatar">SP</span><span><strong>Sync Pay</strong><small>Conta pessoal</small></span><LogOut size={17}/></a></div>
+    </aside>
+    <div className="main-shell"><header className="topbar"><div><button className="menu-button" onClick={()=>setMenu(true)} aria-label="Abrir menu"><Menu size={23}/></button><span className="breadcrumb">Workspace <ChevronRight size={14}/><b>{current.label}</b></span></div><div className="topbar-right"><span className="test-tag"><span/>Operação ativa</span><span className="top-avatar">SP</span></div></header>
+      <main><div className="page-title"><div><span className="eyebrow">SYNC PAY / OPERAÇÃO</span><h1>{current.title}</h1><p>{current.description}</p></div><button className="secondary" onClick={()=>tab==='notifications'?setInstall(true):nav('notifications')}>{tab==='notifications'?<Download size={17}/>:<Bell size={17}/>} {tab==='notifications'?'Como instalar':'Ativar notificações'}</button></div>
+      {notice&&<div className={'notice '+(notice.error?'error':'')} role={notice.error?'alert':'status'}>{notice.error?<TriangleAlert size={19}/>:<Check size={19}/>}<span>{notice.text}</span><button onClick={()=>setNotice(null)} aria-label="Fechar aviso"><X size={17}/></button></div>}
+      {tab==='dashboard'&&<>
+        <div className="dashboard-stats">
+          <article className="stat-card"><div><span>Faturamento bruto</span><span className="stat-icon"><DollarSign size={18}/></span></div><strong>{brl(dashboard.stats.total)}</strong></article>
+          <article className="stat-card"><div><span>Vendas aprovadas</span><span className="stat-icon"><ShoppingBag size={18}/></span></div><strong>{dashboard.stats.approved}</strong></article>
+          <article className="stat-card"><div><span>Ticket médio</span><span className="stat-icon"><WalletCards size={18}/></span></div><strong>{brl(averageTicket)}</strong></article>
+          <article className="stat-card"><div><span>Saldo pendente</span><span className="stat-icon"><History size={18}/></span></div><strong>{brl(dashboard.stats.pendingTotal)}</strong></article>
+          <article className="stat-card"><div><span>Saldo retido</span><span className="stat-icon"><ShieldCheck size={18}/></span></div><strong>{brl(dashboard.stats.heldTotal)}</strong></article>
+          <article className="stat-card"><div><span>Taxa de reembolso</span><span className="stat-icon"><RotateCcw size={18}/></span></div><strong>{refundRate}%</strong></article>
         </div>
-      )}
-
-      <section className="dashboard-stats">
-        {stats.map(({ label, value, helper, Icon }) => (
-          <article className="stat-card" key={label}>
-            <div><span>{label}</span><span className="stat-icon"><Icon size={18} /></span></div>
-            <strong>{value}</strong>
-            <small><span className="green-dot" />{helper}</small>
-          </article>
-        ))}
-      </section>
-
-      <section className="dashboard-panels">
-        <article className="card performance-card">
-          <div className="section-head">
-            <div><span className="section-icon"><ShoppingBag size={17} /></span><div><strong>Desempenho de hoje</strong><small>Volume aprovado por horário</small></div></div>
-            <b>{brl(todayGross)}</b>
-          </div>
-          <div className="performance-chart">
-            <span className="chart-value">{brl(chartMax)}</span>
-            <svg viewBox="0 0 100 90" preserveAspectRatio="none" aria-label="Gráfico de vendas">
-              <line x1="0" y1="20" x2="100" y2="20" /><line x1="0" y1="49" x2="100" y2="49" /><line x1="0" y1="78" x2="100" y2="78" />
-              <polyline points={graphPoints} />
-              {chart.map((item, index) => <circle key={item.label} cx={5 + index * 19} cy={78 - (item.value / chartMax) * 58} r="1.6" />)}
-            </svg>
-            <div className="chart-times">{chart.map((item) => <span key={item.label}>{item.label}</span>)}</div>
-          </div>
-        </article>
-
-        <article className="card awards-card">
-          <div className="section-head">
-            <div><span className="section-icon"><Sparkles size={17} /></span><div><strong>Premiações</strong><small>Metas da sua jornada</small></div></div>
-          </div>
-          <div className="award-showcase">
-            <img src={nextAward.image} alt={`Placa CircusPay ${nextAward.label}`} />
-            <span>{nextAward.short}</span>
-          </div>
-          <div className="award-progress"><i style={{ width: `${awardProgress}%` }} /></div>
-          <div className="award-meta"><span>Próxima placa</span><strong>{brl(gross)} / {brl(nextAward.value)}</strong></div>
-          <div className="award-dots">{awardTargets.map((award, index) => <span className={index === nextAwardIndex ? "active" : ""} key={award.short} />)}</div>
-        </article>
-
-        <article className="card payments-card">
-          <div className="section-head">
-            <div><span className="section-icon"><CreditCard size={17} /></span><div><strong>Meios de pagamento</strong><small>Distribuição das vendas</small></div></div>
-          </div>
-          {methods.map(({ key, label, Icon, count, share }) => (
-            <div className="payment-row" key={key}>
-              <span><Icon size={17} /></span>
-              <div><strong>{label}</strong><small>{count} {count === 1 ? "venda" : "vendas"}</small></div>
-              <b>{share.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</b>
-            </div>
-          ))}
-          <div className="conversion-box"><span>Conversão do checkout</span><strong>{conversion.toLocaleString("pt-BR")}%</strong><div><i style={{ width: `${conversion}%` }} /></div></div>
-        </article>
-      </section>
-
-      <section className="card dashboard-bottom-card">
-        <div>
-          <span className="section-icon"><Landmark size={18} /></span>
-          <div><strong>Comece sua operação</strong><p>{productCount ? `Você possui ${productCount} produto(s) cadastrado(s).` : "Crie seu primeiro produto, defina o valor e gere um checkout."}</p></div>
+        <div className="dashboard-panels">
+          <section className="card performance-card"><div className="panel-heading"><div><span className="section-icon"><LayoutDashboard size={19}/></span><h2>Desempenho</h2></div><button className="period-button"><CalendarDays size={16}/>Hoje<ChevronRight size={15}/></button></div><div className="performance-chart"><span className="chart-value">{brl(dashboard.stats.total)}</span><svg viewBox="0 0 800 270" role="img" aria-label="Desempenho das vendas"><line x1="62" y1="45" x2="780" y2="45"/><line x1="62" y1="95" x2="780" y2="95"/><line x1="62" y1="145" x2="780" y2="145"/><line x1="62" y1="195" x2="780" y2="195"/><polyline points="62,225 180,225 300,225 420,225 540,225 660,225 780,225"/></svg><div className="chart-times"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>18:00</span></div></div></section>
+          <section className="card awards-card"><div className="panel-heading"><div><span className="section-icon"><Trophy size={19}/></span><h2>Premiações</h2></div><div className="award-controls"><button aria-label="Premiação anterior" onClick={()=>setAwardIndex(i=>(i+awards.length-1)%awards.length)}><ChevronLeft size={16}/></button><span>{awardIndex+1}/{awards.length}</span><button aria-label="Próxima premiação" onClick={()=>setAwardIndex(i=>(i+1)%awards.length)}><ChevronRight size={16}/></button></div></div><div className="award-visual" style={{position:'relative'}}><img src={award.image} alt={'Placa da premiação '+award.label} style={{filter:awardUnlocked?'none':'brightness(.78) saturate(.75)',transition:'filter .35s ease'}}/>{!awardUnlocked&&<div aria-label="Premiação bloqueada" style={{position:'absolute',inset:0,display:'grid',placeItems:'center',pointerEvents:'none'}}><span style={{width:52,height:52,borderRadius:'50%',display:'grid',placeItems:'center',background:'rgba(8,8,10,.88)',border:'1px solid rgba(214,168,75,.46)',boxShadow:'0 10px 30px rgba(0,0,0,.42)',color:'#d6a84b',backdropFilter:'blur(10px)'}}><LockKeyhole size={21}/></span></div>}</div><div className="award-progress"><span style={{width:awardProgress+'%'}}/></div><div className="award-meta"><span>{awardUnlocked?'DESBLOQUEADA':'SAQUES PAGOS'}</span><strong>{brl(withdrawnTotal)} / {award.label}</strong></div></section>
+          <section className="card payments-card"><div className="panel-heading"><div><span className="section-icon"><CreditCard size={19}/></span><h2>Meios de pagamento</h2></div></div><div className="payment-row"><span className="pix-mark"/><div><strong>Pix</strong><small>{dashboard.stats.pix} {dashboard.stats.pix===1?'venda':'vendas'}</small></div><b>{paymentShare(dashboard.stats.pix)}%</b></div><div className="payment-row"><CreditCard size={19}/><div><strong>Cartão</strong><small>{dashboard.stats.card} {dashboard.stats.card===1?'venda':'vendas'}</small></div><b>{paymentShare(dashboard.stats.card)}%</b></div><div className="payment-row"><Barcode size={19}/><div><strong>Boleto</strong><small>{dashboard.stats.boleto} {dashboard.stats.boleto===1?'venda':'vendas'}</small></div><b>{paymentShare(dashboard.stats.boleto)}%</b></div><div className="conversion"><span>Conversão</span><div className="gauge"><strong>{approvalRate}%</strong></div><small>{dashboard.stats.approved} de {dashboard.stats.tests} tentativas</small></div></section>
         </div>
-        <div>
-          <span>Saldo disponível <strong>{brl(Number(balance?.available_cents ?? 0))}</strong></span>
-          <Link href="/dashboard/produtos">Ir para produtos <ArrowUpRight size={16} /></Link>
-        </div>
-      </section>
-    </>
-  );
+        
+      </>}
+      {tab==='transactions'&&<section className="card history-card"><div className="section-head"><div><span className="section-icon"><History size={19}/></span><h2>Todas as transações <span className="count">{dashboard.stats.tests}</span></h2></div></div><div className="filters">{[{id:'all',label:'Todas'},{id:'approved',label:'Aprovadas'},{id:'pending',label:'Pendentes'}].map(f=><button className={filter===f.id?'selected':''} key={f.id} onClick={()=>setFilter(f.id)}>{f.label}</button>)}</div>{history()}<p className="table-note">São exibidas as 100 vendas mais recentes. O resultado da notificação aparece na última coluna.</p></section>}
+      {tab==='products'&&<div className="module-grid"><section className="card module-form"><div className="module-card-head"><span className="module-card-icon"><Package size={21}/></span><div><h2>Novo produto</h2><p>Defina o produto e o valor do checkout.</p></div></div><label className="form-field"><span>Nome do produto</span><input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="Ex.: Curso Sync" maxLength={120}/></label><label className="form-field"><span>Preço</span><div className="currency-input"><b>R$</b><input value={productPrice} onChange={e=>setProductPrice(e.target.value)} inputMode="decimal" placeholder="0,00"/></div></label><button className="primary form-submit" disabled={productBusy||!productName.trim()||!productPrice} onClick={createProduct}>{productBusy?<LoaderCircle className="spin" size={18}/>:<Plus size={18}/>}Criar produto e checkout</button><div className="privacy-note"><ShieldCheck size={18}/><span>Cada produto recebe um link exclusivo de checkout.</span></div></section><section className="card module-list"><div className="module-card-head list-head"><div><h2>Seus produtos</h2><span className="count">{products.length}</span></div></div>{products.length?<div className="product-list">{products.map(product=><article key={product.id}><span className="product-icon"><Package size={19}/></span><div><strong>{product.name}</strong><small>{brl(product.cents)} · Checkout ativo</small></div><div className="product-actions"><button onClick={()=>copyCheckout(product)} title="Copiar link"><Copy size={15}/><span>Copiar link</span></button><a href={'/checkout/'+product.id} target="_blank" rel="noreferrer"><ExternalLink size={15}/><span>Abrir</span></a></div></article>)}</div>:<div className="empty module-empty"><Package size={31}/><strong>Nenhum produto criado</strong><p>Crie o primeiro produto para gerar seu checkout.</p></div>}</section></div>}
+      {tab==='refunds'&&<section className="card history-card"><div className="section-head"><div><span className="section-icon"><RotateCcw size={19}/></span><h2>Vendas reembolsadas <span className="count">{dashboard.stats.refunded}</span></h2></div><strong className="refund-total">{brl(dashboard.stats.refundedTotal)}</strong></div>{history(undefined,dashboard.events.filter(e=>!!e.refunded),'Nenhum reembolso realizado')}<p className="table-note">Para reembolsar uma venda, abra Vendas e use a ação Reembolsar.</p></section>}
+      {tab==='finance'&&<><section className="card withdraw-card"><div className="withdraw-copy"><span className="withdraw-icon"><DollarSign size={24}/></span><div><span className="withdraw-label">SALDO DISPONÍVEL ESTIMADO</span><strong>{brl(availableBalance)}</strong><p>Calculado pelas vendas aprovadas no painel. O saldo real aparecerá quando o Mercado Pago for conectado.</p></div></div><div className="withdraw-action"><span><ShieldCheck size={15}/>Confirmação protegida pelo Mercado Pago</span><a className="withdraw-button" href="https://www.mercadopago.com.br/" target="_blank" rel="noreferrer">Sacar pelo Mercado Pago <ArrowUpRight size={17}/></a><small>Você confirma o Pix com senha ou biometria no Mercado Pago.</small></div></section><div className="finance-grid"><section className="card module-form finance-form"><div className="module-card-head"><span className="module-card-icon"><WalletCards size={21}/></span><div><h2>Conta para recebimento</h2><p>Cadastre a chave Pix do titular da operação.</p></div>{financeStatus&&<span className="review-tag">Em análise</span>}</div><label className="form-field"><span>Nome do titular</span><input value={financeHolder} onChange={e=>setFinanceHolder(e.target.value)} placeholder="Nome completo ou razão social"/></label><label className="form-field"><span>Tipo de chave</span><select value={financeKeyType} onChange={e=>setFinanceKeyType(e.target.value)}><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="phone">Telefone</option><option value="random">Chave aleatória</option></select></label><label className="form-field"><span>Chave Pix</span><input value={financeKey} onChange={e=>setFinanceKey(e.target.value)} placeholder="Digite a chave Pix"/></label><div className="privacy-note"><ShieldCheck size={18}/><span>Dados visíveis somente na sua conta privada.</span></div><button className="primary form-submit" disabled={financeBusy||!financeHolder.trim()||!financeKey.trim()} onClick={saveFinance}>{financeBusy?<LoaderCircle className="spin" size={18}/>:<Check size={18}/>}Salvar dados</button></section><section className="card document-panel"><div className="module-card-head"><span className="module-card-icon"><FileText size={21}/></span><div><h2>Documentação</h2><p>Envie PDF, JPG, PNG ou WebP de até 5 MB.</p></div></div><label className={'upload-box '+(financeBusy?'disabled':'')}><Upload size={25}/><strong>Enviar documento</strong><span>Selecione o arquivo no seu dispositivo</span><input type="file" accept=".pdf,image/jpeg,image/png,image/webp" disabled={financeBusy} onChange={e=>{const file=e.target.files?.[0];if(file)uploadFinanceDocument(file);e.currentTarget.value='';}}/></label>{financeDocs.length?<div className="document-list">{financeDocs.map(doc=><a href={'/api/finance?document='+doc.id} target="_blank" rel="noreferrer" key={doc.id}><FileText size={18}/><span><strong>{doc.file_name}</strong><small>{Math.max(1,Math.round(doc.size/1024))} KB · {new Date(doc.created_at).toLocaleDateString('pt-BR')}</small></span><Download size={16}/></a>)}</div>:<div className="empty small-empty"><FileText size={25}/><strong>Nenhum documento enviado</strong></div>}</section></div></>}
+      {tab==='top-sellers'&&<section className="card podium-card"><div className="podium-heading"><span className="module-card-icon gold"><Trophy size={24}/></span><div><span className="mini-label">RANKING</span><h2>Top Sellers</h2><p>O pódio será preenchido conforme as vendas forem registradas.</p></div></div><div className="podium"><article className="podium-place second"><span>2</span><div className="podium-avatar"><Users size={22}/></div><strong>2º lugar</strong><small>Aguardando seller</small><div className="podium-base">2</div></article><article className="podium-place first"><span>1</span><div className="podium-avatar"><Trophy size={24}/></div><strong>1º lugar</strong><small>Aguardando seller</small><div className="podium-base">1</div></article><article className="podium-place third"><span>3</span><div className="podium-avatar"><Users size={22}/></div><strong>3º lugar</strong><small>Aguardando seller</small><div className="podium-base">3</div></article></div></section>}
+      {tab==='acquirers'&&<section className="card module-placeholder"><span className="module-icon"><Landmark size={30}/></span><span className="mini-label">EM BREVE</span><h2>Nenhuma adquirente conectada</h2><p>Gerencie aqui as conexões de processamento da sua operação.</p></section>}
+      {tab==='integrations'&&<section className="card module-placeholder"><span className="module-icon"><Plug size={30}/></span><span className="mini-label">EM BREVE</span><h2>Nenhuma integração conectada</h2><p>Este espaço está preparado para receber suas integrações futuramente.</p></section>}
+      {tab==='notifications'&&<div className="notification-grid"><section className="card device-setup"><span className="big-icon"><Bell size={27}/></span><span className={'connection-tag '+(registered?'on':'')}>{registered?'Este dispositivo está conectado':'Conecte este dispositivo'}</span><h2>{registered?'Tudo pronto para receber.':'Ative suas notificações.'}</h2><p>Receba suas vendas na tela de bloqueio, mesmo com o aplicativo fechado.</p>{ios&&!standalone&&<div className="ios-note"><Info size={19}/><span>No iPhone, adicione à Tela de Início e abra pelo ícone antes de ativar.</span></div>}<button className="primary" disabled={activating||registered} onClick={activate}>{activating?<LoaderCircle className="spin" size={18}/>:registered?<Check size={18}/>:<Bell size={18}/>} {activating?'Conectando…':registered?'Notificações ativadas':'Ativar neste dispositivo'}</button>{registered&&<button className="text-button disconnect" onClick={deactivate} disabled={activating}>Desativar neste dispositivo</button>}<div className="permission"><span>Permissão do navegador</span><strong>{permission==='granted'?'Permitida':permission==='denied'?'Bloqueada':'Ainda não solicitada'}</strong></div></section><section className="card connected-devices"><div className="section-head"><div><h2>Dispositivos</h2><span className="count">{dashboard.devices.length}</span></div><Smartphone size={19}/></div>{dashboard.devices.map(d=><div className="device-row" key={d.endpoint}><span className="device-icon">{d.label==='Computador'?<Monitor size={23}/>:<Smartphone size={23}/>}</span><div><strong>{d.label}</strong><small>{d.endpoint===endpoint?'Este dispositivo':'Conectado em '+new Date(d.created_at).toLocaleDateString('pt-BR')}</small></div><span className="green-dot"/></div>)}{!dashboard.devices.length&&<div className="empty"><Smartphone size={30}/><strong>Nenhum dispositivo ainda</strong><p>Ative no seu celular para começar.</p></div>}<div className="delivery-note"><Info size={18}/><p>Foco, modo silencioso e ajustes do sistema podem afetar os alertas. O histórico registra o resultado do envio.</p></div><button className="secondary" onClick={()=>setInstall(true)}><Download size={16}/>Ver como instalar no iPhone</button></section></div>}
+      {tab==='customers'&&<section className="card module-placeholder"><span className="module-icon"><CurrentIcon size={30}/></span><span className="mini-label">PRÓXIMA ETAPA</span><h2>{current.label}</h2><p>O módulo já está posicionado no painel e será configurado conforme avançarmos na modelagem da Sync Pay.</p><button className="secondary" onClick={()=>nav('dashboard')}><LayoutDashboard size={17}/>Voltar ao Dashboard</button></section>}
+      </main>
+    </div>
+    {install&&<div className="modal-scrim" onClick={()=>setInstall(false)}><section className="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title" onClick={e=>e.stopPropagation()}><button className="modal-close" onClick={()=>setInstall(false)} aria-label="Fechar"><X size={21}/></button><img src="/syncpay-logo-192.png" alt="Sync Pay"/><h2 id="install-title">Sync Pay na sua Tela de Início.</h2><p>Um aplicativo leve, sempre à mão.</p><ol><li><span>1</span><div><strong>Abra este link no Safari</strong><p>Entre com sua conta do ChatGPT se for solicitado.</p></div></li><li><span>2</span><div><strong>Toque em Compartilhar</strong><p>Escolha “Adicionar à Tela de Início”. Mantenha “Abrir como App” ativado, se aparecer.</p></div></li><li><span>3</span><div><strong>Abra pelo novo ícone</strong><p>Vá em Notificações → Ativar neste dispositivo → Permitir.</p></div></li></ol><div className="ios-note"><Info size={17}/><span>Requer iOS 16.4 ou superior. O alerta usa o nome e o ícone da Sync Pay.</span></div><button className="primary" onClick={()=>{setInstall(false);nav('notifications');}}>Entendi <Check size={18}/></button></section></div>}
+  </div>;
 }

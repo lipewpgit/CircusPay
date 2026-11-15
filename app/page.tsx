@@ -30,7 +30,7 @@ const features = [
   { icon: ChartNoAxesCombined, title: "Visão da operação", text: "Vendas, ticket médio, reembolsos e saldo organizados em um painel direto ao ponto." },
   { icon: PackagePlus, title: "Produtos e checkout", text: "Crie seus produtos, defina o valor e gere o checkout para começar a vender." },
   { icon: BellRing, title: "Notificações de venda", text: "Receba alertas de pagamento pendente e aprovado sem precisar atualizar a tela." },
-  { icon: WalletCards, title: "Financeiro e saques", text: "Cadastre sua chave Pix, acompanhe o saldo e solicite saques pela CircusPay." },
+  { icon: WalletCards, title: "Financeiro e saques", text: "Cadastre sua chave Pix, acompanhe o saldo e solicite saques pela Sync Pay." },
 ];
 
 export default function Home() {
@@ -72,14 +72,14 @@ export default function Home() {
         <div className="landing-hero-art" aria-hidden="true">
           <div className="hero-ring ring-a" />
           <div className="hero-ring ring-b" />
-          <div className="hero-logo-orb"><Image src="/circuspay-mark-transparent.png" alt="" width={142} height={142}/></div>
+          <div className="hero-logo-orb"><Image src="/syncpay-logo.png" alt="" width={142} height={142}/></div>
           <div className="hero-sale-card">
             <span>VENDA APROVADA</span>
             <strong>R$ 497,00</strong>
             <small><i /> Confirmada agora</small>
           </div>
           <div className="hero-notification">
-            <Image src="/circuspay-original-v5-192.png" width={39} height={39} alt=""/>
+            <Image src="/syncpay-logo-192.png" width={39} height={39} alt=""/>
             <div><strong>Venda Aprovada!</strong><span>Comissão: R$ 81,64</span></div>
           </div>
           <div className="hero-pix-card"><QrCode size={24}/><div><span>PIX</span><strong>Pagamento rápido</strong></div></div>
@@ -94,7 +94,7 @@ export default function Home() {
         <div className="landing-section-head">
           <span>TUDO EM UM SÓ LUGAR</span>
           <h2>Uma operação bonita por fora.<br/><em>Completa por dentro.</em></h2>
-          <p>A CircusPay reúne o essencial para você criar, vender, acompanhar e movimentar.</p>
+          <p>A Sync Pay reúne o essencial para você criar, vender, acompanhar e movimentar.</p>
         </div>
         <div className="landing-feature-grid">
           {features.map(({ icon: Icon, title, text }, index) => (
@@ -132,16 +132,16 @@ export default function Home() {
       <section className="landing-section awards-section" id="premiacoes" data-reveal>
         <div className="awards-heading">
           <div>
-            <span><Trophy size={15}/> CONQUISTAS CIRCUSPAY</span>
+            <span><Trophy size={15}/> CONQUISTAS SYNC PAY</span>
             <h2>Seu volume de saques<br/>vira <em>história.</em></h2>
           </div>
-          <p>As plaquinhas marcam os grandes momentos da sua operação. Cada meta considera o total de saques aprovados pela CircusPay.</p>
+          <p>As plaquinhas marcam os grandes momentos da sua operação. Cada meta considera o total de saques aprovados pela Sync Pay.</p>
         </div>
         <div className="award-grid">
           {awards.map((award, index) => (
             <article key={award.value} className="award-active" style={{ "--award-index": index } as React.CSSProperties}>
               <div className="award-image-wrap">
-                <Image src={award.image} alt={`Plaquinha CircusPay de ${award.value} em saques`} width={600} height={800}/>
+                <Image src={award.image} alt={`Plaquinha Sync Pay de ${award.value} em saques`} width={600} height={800}/>
               </div>
               <div className="award-meta"><span>{award.label}</span><strong>{award.value} em saques</strong></div>
             </article>
@@ -152,7 +152,7 @@ export default function Home() {
 
       <section className="landing-cta" data-reveal>
         <div className="cta-orbit" />
-        <Image src="/circuspay-mark-transparent.png" width={90} height={90} alt="Logo CircusPay"/>
+        <Image src="/syncpay-logo.png" width={90} height={90} alt="Logo Sync Pay"/>
         <span>O PRÓXIMO RESULTADO COMEÇA AGORA</span>
         <h2>Pronto para colocar sua<br/>operação no centro do espetáculo?</h2>
         <p>Crie sua conta, envie seus dados e comece a preparar seus produtos.</p>
@@ -161,9 +161,9 @@ export default function Home() {
 
       <footer className="landing-footer">
         <Brand compact />
-        <p>Pagamentos, gestão e resultados em uma experiência CircusPay.</p>
+        <p>Pagamentos, gestão e resultados em uma experiência Sync Pay.</p>
         <div><Link href="/login">Entrar</Link><Link href="/cadastro">Criar conta</Link><Link href="/admin/login">Administração</Link></div>
-        <small>© 2026 CircusPay. Todos os direitos reservados.</small>
+        <small>© 2026 Sync Pay. Todos os direitos reservados.</small>
       </footer>
     </main>
   );
