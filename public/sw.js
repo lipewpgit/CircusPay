@@ -3,10 +3,12 @@ self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
   let data={url:'/dashboard'};
   try {if(event.data) data={...data,...event.data.json()};} catch {}
+  const title=data.kind==='pending'?'Venda Pendente!':'Venda Aprovada!';
   event.waitUntil(Promise.all([
-    self.registration.showNotification('Venda Aprovada!',{
-      icon:'/syncpay-logo-192.png?v=8',
-      badge:'/syncpay-logo-192.png?v=8',
+    self.registration.showNotification(title,{
+      body:typeof data.body==='string'?data.body:undefined,
+      icon:'/syncpay-logo-192.png?v=9',
+      badge:'/syncpay-logo-192.png?v=9',
       tag:data.tag || 'syncpay-sale',
       data:{url:data.url || '/dashboard'}
     }),

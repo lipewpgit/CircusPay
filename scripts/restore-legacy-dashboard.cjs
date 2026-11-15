@@ -50,8 +50,20 @@ page = replaceOnce(
   'src="/syncpay-logo-192.png"',
   "install modal logo",
 );
+page = replaceOnce(
+  page,
+  `        </div>
+        
+      </>}
+      {tab==='transactions'`,
+  `        </div>
+        <section className="card compact-sale"><div className="compact-sale-head"><div><span className="section-icon"><Plus size={18}/></span><div><h2>Criar nova venda</h2><p>Área compacta para seus testes.</p></div></div><span className="mini-label">TESTE</span></div><div className="compact-sale-form"><label className="compact-amount"><span>R$</span><input id="amount" inputMode="decimal" maxLength={20} value={amount} onChange={e=>setAmount(e.target.value)} aria-label="Valor da venda" autoComplete="off"/></label><div className="type-switch compact-switch"><button className={kind==='approved'?'selected':''} onClick={()=>setKind('approved')}><Check size={16}/>Aprovada</button><button className={kind==='pending'?'selected pending-selected':''} onClick={()=>setKind('pending')}><History size={16}/>Pendente</button></div><div className="payment-switch" aria-label="Meio de pagamento">{[{id:'pix',label:'Pix'},{id:'card',label:'Cartão'},{id:'boleto',label:'Boleto'}].map(method=><button key={method.id} className={paymentMethod===method.id?'selected':''} onClick={()=>setPaymentMethod(method.id)}>{method.label}</button>)}</div><button className="primary compact-send" onClick={send} disabled={busy||loading||!cents}>{busy?<LoaderCircle className="spin" size={18}/>:<Send size={17}/>} {busy?'Enviando…':'Criar venda'}</button></div></section>
+      </>}
+      {tab==='transactions'`,
+  "manual test sale card",
+);
 page = page
-  .replaceAll('/sw.js?v=5', '/sw.js?v=8')
+  .replaceAll('/sw.js?v=5', '/sw.js?v=9')
   .replaceAll('/circuspay-mark-transparent.png', '/syncpay-logo.png')
   .replaceAll('/circuspay-original-v5-192.png', '/syncpay-logo-192.png')
   .replaceAll('Circus<span className="brand-pay">Pay</span>', 'Sync <span className="brand-pay">Pay</span>')

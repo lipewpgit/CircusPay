@@ -17,12 +17,19 @@ export async function GET() {
     return NextResponse.json({ error: "Sua sessão expirou. Entre novamente." }, { status: 401 });
   }
 
-  const { data: payments, error } = await supabase
-    .from("payments")
-    .select("id,gross_cents,status,method,created_at")
-    .eq("seller_id", authData.user.id)
-    .order("created_at", { ascending: false })
-    .limit(1000);
+  const [{ data: payments, error }, { data: subscriptions }] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id,gross_cents,status,method,created_at")
+      .eq("seller_id", authData.user.id)
+      .order("created_at", { ascending: false })
+      .limit(1000),
+    supabase
+      .from("push_subscriptions")
+      .select("endpoint,label,created_at")
+      .eq("user_id", authData.user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (error) {
     console.error("Failed to load dashboard", error);
@@ -60,7 +67,7 @@ export async function GET() {
   return NextResponse.json(
     {
       events,
-      devices: [],
+      devices: subscriptions ?? [],
       stats: {
         tests: rows.length,
         total: sum(approvedRows),
@@ -73,7 +80,7 @@ export async function GET() {
         pix: approvedRows.filter((payment) => payment.method === "pix").length,
         card: approvedRows.filter((payment) => payment.method === "card").length,
         boleto: approvedRows.filter((payment) => payment.method === "boleto").length,
-        notifications: 0,
+        notifications: subscriptions?.length ?? 0,
       },
     },
     { headers: { "Cache-Control": "no-store" } },
