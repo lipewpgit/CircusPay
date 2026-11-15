@@ -9,7 +9,11 @@ self.addEventListener('push', event => {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {}
 
-  const title = data.kind === 'pending' ? 'Venda pendente!' : 'Venda aprovada!';
+  const title = data.kind === 'pending'
+    ? 'Venda pendente!'
+    : data.paymentMethod === 'pix'
+      ? 'Venda aprovada no Pix!'
+      : 'Venda aprovada!';
 
   event.waitUntil(Promise.all([
     self.registration.showNotification(title, {
