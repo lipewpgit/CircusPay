@@ -88,7 +88,12 @@ export async function POST(request: NextRequest) {
 
   const payload = JSON.stringify({
     kind,
-    title: kind === "pending" ? "Venda pendente!" : "Venda aprovada!",
+    paymentMethod,
+    title: kind === "pending"
+      ? "Venda pendente!"
+      : paymentMethod === "pix"
+        ? "Venda aprovada no Pix!"
+        : "Venda aprovada!",
     body: `Valor: ${brl(cents)}`,
     url: "/dashboard",
     tag: `syncpay-sale-${id}`,
