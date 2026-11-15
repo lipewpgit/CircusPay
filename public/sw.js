@@ -1,13 +1,13 @@
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
-  let data={title:'Sync Pay — teste',body:'Nova notificação de teste.',url:'/'};
+  let data={url:'/dashboard'};
   try {if(event.data) data={...data,...event.data.json()};} catch {}
   event.waitUntil(Promise.all([
-    self.registration.showNotification(data.title,{
-      body:data.body,
-      icon:'/syncpay-logo-192.png?v=7',
-      tag:data.tag || 'circus-sale',
+    self.registration.showNotification('Venda Aprovada!',{
+      icon:'/syncpay-logo-192.png?v=8',
+      badge:'/syncpay-logo-192.png?v=8',
+      tag:data.tag || 'syncpay-sale',
       data:{url:data.url || '/dashboard'}
     }),
     self.clients.matchAll({type:'window',includeUncontrolled:true}).then(clients=>Promise.all(clients.map(client=>client.postMessage({type:'refresh'}))))

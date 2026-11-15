@@ -51,6 +51,7 @@ page = replaceOnce(
   "install modal logo",
 );
 page = page
+  .replaceAll('/sw.js?v=5', '/sw.js?v=8')
   .replaceAll('/circuspay-mark-transparent.png', '/syncpay-logo.png')
   .replaceAll('/circuspay-original-v5-192.png', '/syncpay-logo-192.png')
   .replaceAll('Circus<span className="brand-pay">Pay</span>', 'Sync <span className="brand-pay">Pay</span>')
